@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidget, QTabWidget, QPushButton, QMessageBox, QAction
+from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidget, QTabWidget, QPushButton, QMessageBox, QAction, QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl, QSize
 from PyQt5.QtGui import QIcon
@@ -20,6 +20,9 @@ class BrowserWindow(QMainWindow):
         # История браузера
         self.history = []
 
+        # Закладки
+        self.bookmarks = []
+
         # Добавляем первую вкладку
         self.add_new_tab("https://www.google.com")
 
@@ -31,6 +34,11 @@ class BrowserWindow(QMainWindow):
         history_action = QAction(QIcon("history.png"), "История", self)  # Замените на путь к иконке
         history_action.triggered.connect(self.show_history)
         file_menu.addAction(history_action)
+
+        # Добавляем действие "Закладки"
+        bookmarks_action = QAction(QIcon("bookmarks.png"), "Закладки", self)  # Замените на путь к иконке
+        bookmarks_action.triggered.connect(self.show_bookmarks)
+        file_menu.addAction(bookmarks_action)
 
         # Кнопка для добавления новой вкладки рядом с вкладками
         new_tab_button = QPushButton("+")
@@ -60,6 +68,14 @@ class BrowserWindow(QMainWindow):
         reload_button = QPushButton(QIcon("reload.png"), "")  # Замените на путь к иконке Перезагрузка
         reload_button.clicked.connect(browser.reload)
         toolbar.addWidget(reload_button)
+
+        home_button = QPushButton(QIcon("home.png"), "")  # Замените на путь к иконке Домашняя страница
+        home_button.clicked.connect(lambda: browser.setUrl(QUrl("https://www.google.com")))  # Замените на вашу домашнюю страницу
+        toolbar.addWidget(home_button)
+
+        bookmark_button = QPushButton(QIcon("bookmark.png"), "")  # Замените на путь к иконке Закладки
+        bookmark_button.clicked.connect(lambda: self.add_bookmark(browser))
+        toolbar.addWidget(bookmark_button)
 
         # Адресная строка для URL
         url_bar = QLineEdit()
@@ -116,6 +132,28 @@ class BrowserWindow(QMainWindow):
         history_window.setTextFormat(0)  # Устанавливаем текстовый формат как HTML
         history_window.setInformativeText(history_str if history_str else "История пуста.")
         history_window.exec_()
+
+    def add_bookmark(self, browser):
+        """ Добавляет текущую страницу в закладки. """
+        url = browser.url().toString()
+        title = browser.title()
+        if (url, title) not in self.bookmarks:
+            self.bookmarks.append((url, title))
+            QMessageBox.information(self, "Закладка добавлена", f"{title} добавлена в закладки.")
+        else:
+            QMessageBox.warning(self, "Закладка уже существует", f"{title} уже есть в закладках.")
+
+    def show_bookmarks(self):
+        """ Показывает список закладок. """
+        bookmarks_str = ""
+        for url, title in self.bookmarks:
+            bookmarks_str += f"<a href='{url}'>{title}</a><br>"
+
+        bookmarks_window = QMessageBox(self)
+        bookmarks_window.setWindowTitle("Закладки")
+        bookmarks_window.setTextFormat(0)  # Устанавливаем текстовый формат как HTML
+        bookmarks_window.setInformativeText(bookmarks_str if bookmarks_str else "Закладки пусты.")
+        bookmarks_window.exec_()
 
     def close_tab(self, index):
         """ Закрывает вкладку по индексу. """
