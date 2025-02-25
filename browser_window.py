@@ -23,7 +23,8 @@ class SearchEngineSettings(QDialog):
             "Yandex": "https://yandex.ru/search/?text=",
             "DuckDuckGo": "https://duckduckgo.com/?q=",
             "Bing": "https://www.bing.com/search?q=",
-            "Mail.ru": "https://go.mail.ru/search?q="
+            "Mail.ru": "https://go.mail.ru/search?q=",
+            "YouTube": "https://www.youtube.com/results?search_query="
         }
 
         # Выпадающий список для выбора поисковой системы
