@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidg
     QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QFrame, QSlider, QFontDialog, QFileDialog
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl, QSize, Qt
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtGui import QIcon, QFont, QClipboard
 import sys
 import pygame
 import requests
@@ -24,7 +24,8 @@ class SearchEngineSettings(QDialog):
             "DuckDuckGo": "https://duckduckgo.com/?q=",
             "Bing": "https://www.bing.com/search?q=",
             "Mail.ru": "https://go.mail.ru/search?q=",
-            "YouTube": "https://www.youtube.com/results?search_query="
+            "YouTube": "https://www.youtube.com/results?search_query=",
+            "Warn!!! Porno!!! Warn!!!": "https://web.vk.me/"
         }
 
         # Выпадающий список для выбора поисковой системы
@@ -140,35 +141,10 @@ class HomePage(QWidget):
         search_button.setCursor(Qt.PointingHandCursor)
         layout.addWidget(search_button)
 
-        # Кнопка для выхода из приложения
-        exit_button = QPushButton("Выход")
-        exit_button.setStyleSheet("""
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 20px;
-            border: none;
-            background-color: #FF4D4D;
-            color: #fff;
-            transition: background-color 0.3s, transform 0.3s;
-        """)
-        exit_button.clicked.connect(QApplication.instance().quit)
-        exit_button.setCursor(Qt.PointingHandCursor)
-        layout.addWidget(exit_button)
-
         # Кнопка для генерации пароля
         generate_password_button = QPushButton("Сгенерировать логин и пароль")
         generate_password_button.clicked.connect(self.generate_credentials)
         layout.addWidget(generate_password_button)
-
-        # Кнопка для загрузки медиафайла
-        load_media_button = QPushButton("Загрузить медиафайл")
-        load_media_button.clicked.connect(self.load_media)
-        layout.addWidget(load_media_button)
-
-        # Кнопка для перевода текста
-        translate_button = QPushButton("Перевести текст")
-        translate_button.clicked.connect(self.translate_text)
-        layout.addWidget(translate_button)
 
         self.setLayout(layout)
 
@@ -283,8 +259,44 @@ class HomePage(QWidget):
         """ Генерирует случайный логин и пароль. """
         username = self.generate_username()
         password = self.generate_password()
-        QMessageBox.information(self, "Сгенерированные данные", f"Логин: {username}\nПароль: {password}")
-        self.parent.play_click_sound()  # Воспроизводим звук клика
+
+        # Создаем диалоговое окно с кнопками для копирования
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Сгенерированные данные")
+        dialog.setMinimumSize(300, 150)  # Устанавливаем минимальный размер окна
+
+        layout = QVBoxLayout()
+
+        # Логин
+        username_layout = QHBoxLayout()
+        username_label = QLabel(f"Логин: {username}")
+        username_layout.addWidget(username_label)
+        copy_username_button = QPushButton("Копировать")
+        copy_username_button.clicked.connect(lambda: self.copy_to_clipboard(username))
+        username_layout.addWidget(copy_username_button)
+        layout.addLayout(username_layout)
+
+        # Пароль
+        password_layout = QHBoxLayout()
+        password_label = QLabel(f"Пароль: {password}")
+        password_layout.addWidget(password_label)
+        copy_password_button = QPushButton("Копировать")
+        copy_password_button.clicked.connect(lambda: self.copy_to_clipboard(password))
+        password_layout.addWidget(copy_password_button)
+        layout.addLayout(password_layout)
+
+        # Кнопка закрытия
+        close_button = QPushButton("Закрыть")
+        close_button.clicked.connect(dialog.close)
+        layout.addWidget(close_button)
+
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def copy_to_clipboard(self, text):
+        """ Копирует текст в буфер обмена. """
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text)
 
     def generate_username(self):
         """ Генерирует случайный логин. """
@@ -294,44 +306,6 @@ class HomePage(QWidget):
         """ Генерирует случайный пароль. """
         characters = string.ascii_letters + string.digits + string.punctuation
         return ''.join(random.choices(characters, k=12))
-
-    def load_media(self):
-        """ Загружает медиафайл. """
-        options = QFileDialog.Options()
-        file_name, _ = QFileDialog.getOpenFileName(self, "Выберите медиафайл", "", "Media Files (*.mp3 *.mp4 *.wav);;All Files (*)", options=options)
-        if file_name:
-            self.play_media(file_name)
-            self.parent.play_click_sound()  # Воспроизводим звук клика
-
-    def play_media(self, file_path):
-        """ Воспроизводит медиафайл. """
-        player = QMediaPlayer()
-        media_content = QMediaContent(QUrl.fromLocalFile(file_path))
-        player.setMedia(media_content)
-        player.setVolume(100)
-        player.play()
-
-    def translate_text(self):
-        """ Переводит текст с использованием Google Translate API. """
-        text, ok = QInputDialog.getText(self, "Перевод текста", "Введите текст для перевода:")
-        if ok and text:
-            translated_text = self.google_translate(text)
-            QMessageBox.information(self, "Переведенный текст", translated_text)
-            self.parent.play_click_sound()  # Воспроизводим звук клика
-
-    def google_translate(self, text):
-        """ Использует Google Translate API для перевода текста. """
-        api_key = ""  # Замените на свой ключ API
-        url = f"https://translation.googleapis.com/language/translate/v2?key={api_key}"
-        data = {
-            'q': text,
-            'target': 'en'  # Замените на нужный язык
-        }
-        response = requests.post(url, json=data)
-        if response.status_code == 200:
-            return response.json()['data']['translations'][0]['translatedText']
-        else:
-            return "Ошибка перевода"
 
 
 class BrowserTab(QWidget):
@@ -344,7 +318,7 @@ class BrowserTab(QWidget):
         """ Инициализация интерфейса вкладки браузера. """
         layout = QVBoxLayout()
 
-        # Панель инструментов с адресной строкой и кнопками
+        # Панель инструментов с адресной строки и кнопками
         self.toolbar = QToolBar()
         self.toolbar.setIconSize(QSize(16, 16))
 
@@ -526,7 +500,7 @@ class BrowserWindow(QMainWindow):
         self.tab_open_sound.play()
 
     def play_tab_close_sound(self):
-        """ Воспроизводит звук закрытия вкладки. """
+        """ Воспроизводит звук закрытия вкладка. """
         self.tab_close_sound.play()
 
 
