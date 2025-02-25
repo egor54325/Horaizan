@@ -1,10 +1,14 @@
 from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidget, QTabWidget, QPushButton, \
-    QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QFrame, QSlider, QFontDialog
+    QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QFrame, QSlider, QFontDialog, QFileDialog
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl, QSize, Qt
 from PyQt5.QtGui import QIcon, QFont
 import sys
 import pygame
+import requests
+import json
+import random
+import string
 
 
 class SearchEngineSettings(QDialog):
@@ -26,7 +30,7 @@ class SearchEngineSettings(QDialog):
         self.engine_combo = QComboBox()
         self.engine_combo.addItems(self.search_engines.keys())
 
-        # Кнопки для подтверждения или отменя
+        # Кнопки для подтверждения или отмены
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
@@ -42,19 +46,19 @@ class SearchEngineSettings(QDialog):
         """ Возвращает выбранную поисковую систему. """
         return self.engine_combo.currentText()
 
+    def get_search_url(self, query):
+        """ Возвращает URL для поискового запроса. """
+        return self.search_engines[self.engine_combo.currentText()] + query
+
 
 class AppearanceSettings(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Настройки внешнего вида")
-        self.setGeometry(200, 200, 300, 200)
+        self.setGeometry(200, 200, 300, 150)
 
         # Инициализация переменной для шрифта
         self.selected_font = QFont()  # Инициализируем переменную
-
-        # Выбор темы
-        self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Светлая", "Тёмная"])
 
         # Выбор шрифта
         self.font_button = QPushButton("Выбрать шрифт")
@@ -66,15 +70,13 @@ class AppearanceSettings(QDialog):
         self.zoom_slider.setMaximum(200)
         self.zoom_slider.setValue(100)
 
-        # Кнопки для подтверждения или отменя
+        # Кнопки для подтверждения или отмены
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
 
         # Основной макет
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Выберите тему:"))
-        layout.addWidget(self.theme_combo)
         layout.addWidget(QLabel("Выберите шрифт:"))
         layout.addWidget(self.font_button)
         layout.addWidget(QLabel("Масштабирование:"))
@@ -87,10 +89,6 @@ class AppearanceSettings(QDialog):
         font, ok = QFontDialog.getFont()
         if ok:
             self.selected_font = font
-
-    def get_selected_theme(self):
-        """ Возвращает выбранную тему. """
-        return self.theme_combo.currentText()
 
     def get_selected_font(self):
         """ Возвращает выбранный шрифт. """
@@ -116,18 +114,28 @@ class HomePage(QWidget):
         self.web_view.setHtml(self.get_animation_html())
         layout.addWidget(self.web_view)
 
+        # Поле для ввода URL
+        self.url_input = QLineEdit()
+        self.url_input.setPlaceholderText("Введите URL или запрос...")
+        layout.addWidget(self.url_input)
+
+        # Поле для ввода поискового запроса
+        self.query_input = QLineEdit()
+        self.query_input.setPlaceholderText("Введите запрос для поиска...")
+        layout.addWidget(self.query_input)
+
         # Кнопка для перехода на поисковую страницу
         search_button = QPushButton("Перейти к поиску")
         search_button.setStyleSheet("""
             padding: 10px 20px;
             font-size: 16px;
-            border-radius: 10px;
+            border-radius: 20px;
             border: none;
             background-color: #007BFF;
             color: #fff;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s, transform 0.3s;
         """)
-        search_button.clicked.connect(lambda: self.open_link("https://www.google.com"))
+        search_button.clicked.connect(self.perform_search)
         search_button.setCursor(Qt.PointingHandCursor)
         layout.addWidget(search_button)
 
@@ -136,20 +144,35 @@ class HomePage(QWidget):
         exit_button.setStyleSheet("""
             padding: 10px 20px;
             font-size: 16px;
-            border-radius: 10px;
+            border-radius: 20px;
             border: none;
             background-color: #FF4D4D;
             color: #fff;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s, transform 0.3s;
         """)
         exit_button.clicked.connect(QApplication.instance().quit)
         exit_button.setCursor(Qt.PointingHandCursor)
         layout.addWidget(exit_button)
 
+        # Кнопка для генерации пароля
+        generate_password_button = QPushButton("Сгенерировать логин и пароль")
+        generate_password_button.clicked.connect(self.generate_credentials)
+        layout.addWidget(generate_password_button)
+
+        # Кнопка для загрузки медиафайла
+        load_media_button = QPushButton("Загрузить медиафайл")
+        load_media_button.clicked.connect(self.load_media)
+        layout.addWidget(load_media_button)
+
+        # Кнопка для перевода текста
+        translate_button = QPushButton("Перевести текст")
+        translate_button.clicked.connect(self.translate_text)
+        layout.addWidget(translate_button)
+
         self.setLayout(layout)
 
     def get_animation_html(self):
-        """ Возвращает HTML-код с анимацией текста и минималистичным фоном. """
+        """ Возвращает HTML-код с анимацией текста и градиентным фоном с летающими объектами. """
         return """
         <!DOCTYPE html>
         <html lang="ru">
@@ -161,7 +184,7 @@ class HomePage(QWidget):
                     margin: 0;
                     padding: 0;
                     overflow: hidden;
-                    background: linear-gradient(135deg, #f0f0f0, #e0e0e0); /* Минималистичный фон */
+                    background: linear-gradient(135deg, #1e3c72, #2a5298);
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
@@ -171,363 +194,343 @@ class HomePage(QWidget):
                 }
 
                 .title {
-                    font-size: 64px;
+                    font-size: 80px;
                     font-weight: bold;
-                    color: #333;
+                    color: #fff;
                     text-align: center;
                     animation: float 3s infinite ease-in-out, glow 2s infinite alternate;
-                    text-shadow: 0 0 10px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 0, 0, 0.1);
+                    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.1);
                 }
 
                 .subtitle {
                     font-size: 24px;
                     font-weight: normal;
-                    color: #666;
+                    color: #ccc;
                     text-align: center;
                     animation: fadeIn 2s ease-in-out infinite alternate;
+                    cursor: pointer;  /* Добавляем указатель для курсора */
+                }
+
+                .object {
+                    position: absolute;
+                    width: 20px;
+                    height: 20px;
+                    background-color: rgba(255, 255, 255, 0.2);
+                    border-radius: 50%;
+                    animation: floatObject 10s infinite ease-in-out;
                 }
 
                 @keyframes float {
-                    0% {
-                        transform: translateY(0);
-                    }
-                    50% {
-                        transform: translateY(-10px);
-                    }
-                    100% {
-                        transform: translateY(0);
-                    }
+                    0% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                    100% { transform: translateY(0); }
                 }
 
                 @keyframes glow {
-                    0% {
-                        text-shadow: 0 0 10px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 0, 0, 0.1);
-                    }
-                    100% {
-                        text-shadow: 0 0 20px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.2);
-                    }
+                    0% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.1); }
+                    100% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(255, 255, 255, 0.2); }
                 }
 
                 @keyframes fadeIn {
-                    0% {
-                        opacity: 0.5;
-                    }
-                    100% {
-                        opacity: 1;
-                    }
+                    0% { opacity: 0.5; }
+                    100% { opacity: 1; }
+                }
+
+                @keyframes floatObject {
+                    0% { transform: translate(0, 0); }
+                    50% { transform: translate(100px, 100px); }
+                    100% { transform: translate(0, 0); }
                 }
             </style>
         </head>
         <body>
             <div class="title">Horaizan</div>
-            <div class="subtitle">By Xarays & Wonordel</div>
+            <div class="subtitle" onclick="showMeme()">By Xarays & Wonordel</div>
+            <div class="object" style="top: 10%; left: 20%;"></div>
+            <div class="object" style="top: 30%; left: 50%;"></div>
+            <div class="object" style="top: 70%; left: 10%;"></div>
+            <div class="object" style="top: 50%; left: 80%;"></div>
+            <script>
+                function showMeme() {
+                    alert("Horaizan - лучший браузер!");
+                }
+            </script>
         </body>
         </html>
         """
 
+    def perform_search(self):
+        """ Выполняет поиск по введенному запросу или открывает URL. """
+        query = self.query_input.text().strip()
+        url = self.url_input.text().strip()
+
+        if url:
+            self.open_link(url)
+        elif query:
+            search_dialog = SearchEngineSettings(self)
+            if search_dialog.exec_():
+                search_url = search_dialog.get_search_url(query)
+                self.open_link(search_url)
+
     def open_link(self, url):
-        """ Открывает ссылку в браузере. """
-        self.parent.add_new_tab(url)
+        """ Открывает ссылку в новой вкладке. """
+        self.parent.tabs.addTab(BrowserTab(self.parent, url), "Новая вкладка")
+        self.parent.tabs.setCurrentIndex(self.parent.tabs.count() - 1)
+        self.parent.play_tab_open_sound()  # Воспроизводим звук открытия вкладки
+
+    def generate_credentials(self):
+        """ Генерирует случайный логин и пароль. """
+        username = self.generate_username()
+        password = self.generate_password()
+        QMessageBox.information(self, "Сгенерированные данные", f"Логин: {username}\nПароль: {password}")
+        self.parent.play_click_sound()  # Воспроизводим звук клика
+
+    def generate_username(self):
+        """ Генерирует случайный логин. """
+        return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
+    def generate_password(self):
+        """ Генерирует случайный пароль. """
+        characters = string.ascii_letters + string.digits + string.punctuation
+        return ''.join(random.choices(characters, k=12))
+
+    def load_media(self):
+        """ Загружает медиафайл. """
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(self, "Выберите медиафайл", "", "Media Files (*.mp3 *.mp4 *.wav);;All Files (*)", options=options)
+        if file_name:
+            self.play_media(file_name)
+            self.parent.play_click_sound()  # Воспроизводим звук клика
+
+    def play_media(self, file_path):
+        """ Воспроизводит медиафайл. """
+        player = QMediaPlayer()
+        media_content = QMediaContent(QUrl.fromLocalFile(file_path))
+        player.setMedia(media_content)
+        player.setVolume(100)
+        player.play()
+
+    def translate_text(self):
+        """ Переводит текст с использованием Google Translate API. """
+        text, ok = QInputDialog.getText(self, "Перевод текста", "Введите текст для перевода:")
+        if ok and text:
+            translated_text = self.google_translate(text)
+            QMessageBox.information(self, "Переведенный текст", translated_text)
+            self.parent.play_click_sound()  # Воспроизводим звук клика
+
+    def google_translate(self, text):
+        """ Использует Google Translate API для перевода текста. """
+        api_key = ""  # Замените на свой ключ API
+        url = f"https://translation.googleapis.com/language/translate/v2?key={api_key}"
+        data = {
+            'q': text,
+            'target': 'en'  # Замените на нужный язык
+        }
+        response = requests.post(url, json=data)
+        if response.status_code == 200:
+            return response.json()['data']['translations'][0]['translatedText']
+        else:
+            return "Ошибка перевода"
+
+
+class BrowserTab(QWidget):
+    def __init__(self, parent=None, url=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.init_ui(url)
+
+    def init_ui(self, url):
+        """ Инициализация интерфейса вкладки браузера. """
+        layout = QVBoxLayout()
+
+        # Панель инструментов с адресной строкой и кнопками
+        self.toolbar = QToolBar()
+        self.toolbar.setIconSize(QSize(16, 16))
+
+        # Кнопка "Назад"
+        self.back_button = QAction(QIcon("back.png"), "Назад", self)
+        self.back_button.triggered.connect(self.navigate_back)
+        self.toolbar.addAction(self.back_button)
+
+        # Кнопка "Вперед"
+        self.forward_button = QAction(QIcon("right.png"), "Вперед", self)
+        self.forward_button.triggered.connect(self.navigate_forward)
+        self.toolbar.addAction(self.forward_button)
+
+        # Кнопка "Обновить"
+        self.reload_button = QAction(QIcon("reload.png"), "Обновить", self)
+        self.reload_button.triggered.connect(self.reload_page)
+        self.toolbar.addAction(self.reload_button)
+
+        # Адресная строка
+        self.url_bar = QLineEdit()
+        self.url_bar.returnPressed.connect(self.navigate_to_url)
+        self.toolbar.addWidget(self.url_bar)
+
+        # Кнопка "Домой"
+        self.home_button = QAction(QIcon("home.png"), "Домой", self)
+        self.home_button.triggered.connect(self.navigate_home)
+        self.toolbar.addAction(self.home_button)
+
+        layout.addWidget(self.toolbar)
+
+        # Веб-просмотрщик
+        self.browser = QWebEngineView()
+        if url:
+            self.browser.setUrl(QUrl(url))
+        else:
+            self.browser.setUrl(QUrl("https://www.google.com"))  # Открываем Google по умолчанию
+        self.browser.urlChanged.connect(self.update_urlbar)
+        layout.addWidget(self.browser)
+
+        self.setLayout(layout)
+
+    def navigate_back(self):
+        """ Переход на предыдущую страницу. """
+        self.browser.back()
+        self.parent.play_click_sound()  # Воспроизводим звук клика
+
+    def navigate_forward(self):
+        """ Переход на следующую страницу. """
+        self.browser.forward()
+        self.parent.play_click_sound()  # Воспроизводим звук клика
+
+    def reload_page(self):
+        """ Обновление текущей страницы. """
+        self.browser.reload()
+        self.parent.play_click_sound()  # Воспроизводим звук клика
+
+    def navigate_to_url(self):
+        """ Переход по введенному URL. """
+        url = self.url_bar.text()
+        if not url.startswith("http"):
+            url = "https://" + url
+        self.browser.setUrl(QUrl(url))
+        self.parent.play_click_sound()  # Воспроизводим звук клика
+
+    def navigate_home(self):
+        """ Переход на домашнюю страницу. """
+        self.browser.setUrl(QUrl("https://www.google.com"))  # Переход на домашнюю страницу
+        self.parent.play_click_sound()  # Воспроизводим звук клика
+
+    def update_urlbar(self, q):
+        """ Обновление адресной строки при изменении URL. """
+        self.url_bar.setText(q.toString())
+
 
 class BrowserWindow(QMainWindow):
-    def __init__(self, url=None):
+    def __init__(self):
         super().__init__()
-        self.setWindowTitle("Horaizan")
-        self.setGeometry(100, 100, 1024, 768)
-        self.setWindowIcon(QIcon("icon.jpg"))  # Замените на путь к вашей иконке
+        self.setWindowTitle("Horaizan Browser")
+        self.setGeometry(100, 100, 1200, 800)
 
-        # Инициализация Pygame
-        pygame.init()
-        pygame.mixer.init()  # Инициализация микшера
-        self.click_sound = pygame.mixer.Sound("click.mp3")  # Замените на путь к вашему звуковому файлу
-        self.tab_open_sound = pygame.mixer.Sound("tab_open.mp3")  # Замените на путь к вашему звуковому файлу
+        # Инициализация звуков
+        pygame.mixer.init()
+        self.click_sound = pygame.mixer.Sound("click.mp3")
+        self.tab_open_sound = pygame.mixer.Sound("tab_open.mp3")
+        self.tab_close_sound = pygame.mixer.Sound("tab_close.mp3")
 
-        # Виджет для вкладок
+        # Основной макет
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_tab)
+        self.tabs.setStyleSheet("""
+            QTabBar::tab {
+                padding: 10px;
+                border-radius: 10px;
+                background-color: #f0f0f0;
+                margin: 2px;
+                transition: background-color 0.3s;
+            }
+            QTabBar::tab:selected {
+                background-color: #007BFF;
+                color: #fff;
+            }
+            QTabBar::tab:hover {
+                background-color: #0056b3;
+                color: #fff;
+            }
+        """)
         self.setCentralWidget(self.tabs)
 
-        # История браузера
-        self.history = []
+        # Добавление домашней страницы
+        self.home_page = HomePage(self)
+        self.tabs.addTab(self.home_page, "Домой")
 
-        # Закладки
-        self.bookmarks = []
+        # Панель меню
+        self.init_menu()
 
-        # Поисковая система по умолчанию
-        self.search_engine = "Google"
-        self.search_url = "https://www.google.com/search?q="
+    def init_menu(self):
+        """ Инициализация меню браузера. """
+        menubar = self.menuBar()
 
-        # Тема по умолчанию
-        self.theme = "Светлая"
-        self.font = QFont("Arial", 12)
-        self.zoom_level = 100
+        # Меню "Файл"
+        file_menu = menubar.addMenu("Файл")
+        new_tab_action = QAction("Новая вкладка", self)
+        new_tab_action.triggered.connect(self.add_new_tab)
+        file_menu.addAction(new_tab_action)
 
-        # Добавляем первую вкладку (домашняя страница)
-        self.add_new_tab(url if url else None)
+        exit_action = QAction("Выход", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
 
-        # Создаем меню "Файл" с возможностью показать историю
-        menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu("Меню")
+        # Меню "Настройки"
+        settings_menu = menubar.addMenu("Настройки")
+        search_engine_action = QAction("Поисковая система", self)
+        search_engine_action.triggered.connect(self.set_search_engine)
+        settings_menu.addAction(search_engine_action)
 
-        # Добавляем действие "История"
-        history_action = QAction(QIcon("history.png"), "История", self)  # Замените на путь к иконке
-        history_action.triggered.connect(self.show_history)
-        file_menu.addAction(history_action)
+        appearance_action = QAction("Внешний вид", self)
+        appearance_action.triggered.connect(self.set_appearance)
+        settings_menu.addAction(appearance_action)
 
-        # Добавляем действие "Закладки"
-        bookmarks_action = QAction(QIcon("bookmarks.png"), "Закладки", self)  # Замените на путь к иконке
-        bookmarks_action.triggered.connect(self.show_bookmarks)
-        file_menu.addAction(bookmarks_action)
+    def add_new_tab(self):
+        """ Добавляет новую вкладку. """
+        new_tab = BrowserTab(self)
+        self.tabs.addTab(new_tab, "Новая вкладка")
+        self.tabs.setCurrentIndex(self.tabs.count() - 1)
+        self.play_tab_open_sound()  # Воспроизводим звук открытия вкладки
 
-        # Добавляем действие "Настройки поисковой системы"
-        search_engine_action = QAction(QIcon("search.png"), "Настройки поисковой системы", self)  # Замените на путь к иконке
-        search_engine_action.triggered.connect(self.change_search_engine)
-        file_menu.addAction(search_engine_action)
-
-        # Добавляем действие "Настройки внешнего вида"
-        appearance_action = QAction(QIcon("appearance.png"), "Настройки внешнего вида", self)  # Замените на путь к иконке
-        appearance_action.triggered.connect(self.change_appearance)
-        file_menu.addAction(appearance_action)
-
-        # Кнопка для добавления новой вкладки рядом с вкладками
-        new_tab_button = QPushButton("+")
-        new_tab_button.setFixedSize(QSize(50, 30))  # Фиксированный размер кнопки
-        new_tab_button.clicked.connect(self.add_new_tab)
-        self.tabs.setCornerWidget(new_tab_button)
-
-        self.tabs.tabBar().setMovable(True)  # Даем возможность перетаскивать вкладки
-
-    def add_new_tab(self, url=None):
-        """ Добавляет новую вкладку с браузером или домашней страницой. """
-        if url is None or not isinstance(url, str):
-            # Создаем домашнюю страницу
-            home_page = HomePage(self)
-            container = QWidget()
-            layout = QVBoxLayout()
-            layout.addWidget(home_page)
-            container.setLayout(layout)
-            self.tabs.addTab(container, "Домашняя страница")
+    def close_tab(self, index):
+        """ Закрывает вкладку. """
+        if self.tabs.count() > 1:
+            self.tabs.removeTab(index)
+            self.play_tab_close_sound()  # Воспроизводим звук закрытия вкладки
         else:
-            # Проверяем, что url является строкой
-            if isinstance(url, str):
-                # Создаем браузер
-                browser = QWebEngineView()
-                browser.setUrl(QUrl(url))
+            QMessageBox.warning(self, "Ошибка", "Нельзя закрыть последнюю вкладку.")
 
-                # Обёртка для браузера с закруглёнными краями
-                frame = QFrame()
-                frame.setStyleSheet(
-                    "border-radius: 15px; border: 1px solid #ccc; overflow: hidden;")  # Закругление и рамка
-                browser.setStyleSheet("border: none;")  # Убираем рамку у браузера
+    def set_search_engine(self):
+        """ Открывает диалог настройки поисковой системы. """
+        search_engine_dialog = SearchEngineSettings(self)
+        if search_engine_dialog.exec_():
+            selected_engine = search_engine_dialog.get_selected_engine()
+            QMessageBox.information(self, "Успех", f"Выбрана поисковая система: {selected_engine}")
+            self.play_click_sound()  # Воспроизводим звук клика
 
-                # Панель инструментов с адресной строкой
-                toolbar = QToolBar()
-
-                # Кнопки навигации
-                back_button = QPushButton(QIcon("back.png"), "")  # Замените на путь к иконке Назад
-                back_button.clicked.connect(lambda: (self.play_click_sound(), browser.back()))
-                toolbar.addWidget(back_button)
-
-                forward_button = QPushButton(QIcon("right.png"), "")  # Замените на путь к иконке Вперед
-                forward_button.clicked.connect(lambda: (self.play_click_sound(), browser.forward()))
-                toolbar.addWidget(forward_button)
-
-                reload_button = QPushButton(QIcon("reload.png"), "")  # Замените на путь к иконке Перезагрузка
-                reload_button.clicked.connect(lambda: (self.play_click_sound(), browser.reload()))
-                toolbar.addWidget(reload_button)
-
-                home_button = QPushButton(QIcon("home.png"), "")  # Замените на путь к иконке Домашняя страница
-                home_button.clicked.connect(
-                    lambda: (self.play_click_sound(), self.add_new_tab()))  # Открываем домашнюю страницу
-                toolbar.addWidget(home_button)
-
-                bookmark_button = QPushButton(QIcon("bookmark.png"), "")  # Замените на путь к иконке Закладки
-                bookmark_button.clicked.connect(lambda: (self.play_click_sound(), self.add_bookmark(browser)))
-                toolbar.addWidget(bookmark_button)
-
-                # Адресная строка для URL
-                url_bar = QLineEdit()
-                url_bar.returnPressed.connect(lambda: (self.play_click_sound(), self.navigate_to_url(url_bar, browser)))
-                toolbar.addWidget(url_bar)
-
-                # Обновление адресной строки при изменении URL
-                browser.urlChanged.connect(lambda q: self.update_url_bar(url_bar, q))
-
-                # Сохранение истории
-                browser.urlChanged.connect(lambda q: self.save_history(q, browser))
-
-                # Обновление заголовка и иконки вкладки при изменении названия сайта
-                browser.titleChanged.connect(lambda title: self.update_tab_title_and_icon(browser, title))
-
-                # Создаем контейнер для браузера и панели инструментов
-                container = QWidget()
-                layout = QVBoxLayout()
-                layout.addWidget(toolbar)
-                layout.addWidget(frame)  # Добавляем QFrame
-                frame_layout = QVBoxLayout(frame)
-                frame_layout.addWidget(browser)  # Добавляем браузер в QFrame
-                container.setLayout(layout)
-
-                # Добавляем вкладку
-                self.tabs.addTab(container, "Вкладка")  # Название по умолчанию
-                self.tabs.setCurrentIndex(self.tabs.count() - 1)  # Переключаемся на новую вкладку
-
-                # Воспроизводим звук открытия вкладки
-                self.play_tab_open_sound()
+    def set_appearance(self):
+        """ Открывает диалог настройки внешнего вида. """
+        appearance_dialog = AppearanceSettings(self)
+        if appearance_dialog.exec_():
+            selected_font = appearance_dialog.get_selected_font()
+            zoom_level = appearance_dialog.get_zoom_level()
+            self.setFont(selected_font)
+            self.tabs.setStyleSheet(f"font-size: {zoom_level}%;")
+            self.play_click_sound()  # Воспроизводим звук клика
 
     def play_click_sound(self):
         """ Воспроизводит звук клика. """
         self.click_sound.play()
 
     def play_tab_open_sound(self):
-        """ Воспроизводит звук открытия вкладки. """
         self.tab_open_sound.play()
 
-    def update_tab_title_and_icon(self, browser, title):
-        """ Обновление заголовка вкладки и иконки. """
-        index = self.tabs.indexOf(browser.parent())
-        if index != -1:
-            self.tabs.setTabText(index, title)  # Устанавливаем название вкладки
-            icon = browser.icon()
-            self.tabs.setTabIcon(index, icon)  # Устанавливаем иконку вкладки
-
-    def save_history(self, q, browser):
-        """ Сохраняет URL и название сайта в истории. """
-        url = q.toString()
-        title = browser.title()
-        if url not in [entry[0] for entry in self.history]:
-            icon = browser.icon()
-            self.history.append((url, title, icon))
-
-    def show_history(self):
-        """ Показывает историю браузера. """
-        history_str = ""
-        for url, title, icon in self.history:
-            history_str += f"<a href='{url}'>{title}</a><br>"
-
-        history_window = QMessageBox(self)
-        history_window.setWindowTitle("История браузера")
-        history_window.setTextFormat(0)  # Устанавливаем текстовый формат как HTML
-        history_window.setInformativeText(history_str if history_str else "История пуста.")
-        history_window.exec_()
-
-    def add_bookmark(self, browser):
-        """ Добавляет текущую страницу в закладки. """
-        url = browser.url().toString()
-        title = browser.title()
-        if (url, title) not in self.bookmarks:
-            self.bookmarks.append((url, title))
-            QMessageBox.information(self, "Закладка добавлена", f"{title} добавлена в закладки.")
-            # Воспроизводим звук клика
-            self.play_click_sound()
-        else:
-            QMessageBox.warning(self, "Закладка уже существует", f"{title} уже есть в закладках.")
-
-    def show_bookmarks(self):
-        """ Показывает список закладки. """
-        bookmarks_str = ""
-        for url, title in self.bookmarks:
-            bookmarks_str += f"<a href='{url}'>{title}</a><br>"
-
-        bookmarks_window = QMessageBox(self)
-        bookmarks_window.setWindowTitle("Закладки")
-        bookmarks_window.setTextFormat(0)  # Устанавливаем текстовый формат как HTML
-        bookmarks_window.setInformativeText(bookmarks_str if bookmarks_str else "Закладки пусты.")
-        bookmarks_window.exec_()
-
-    def close_tab(self, index):
-        """ Закрывает вкладку по индексу. """
-        if self.tabs.count() > 1:
-            self.tabs.removeTab(index)
-
-    def navigate_to_url(self, url_bar, browser):
-        """ Переход по URL. """
-        url = url_bar.text()
-        if url.startswith("http://") or url.startswith("https://"):
-            browser.setUrl(QUrl(url))
-        else:
-            search_url = f"{self.search_url}{url}"
-            browser.setUrl(QUrl(search_url))
-
-    def update_url_bar(self, url_bar, q):
-        """ Обновление адресной строки при изменении URL. """
-        url_bar.setText(q.toString())
-
-    def change_search_engine(self):
-        """ Открывает диалог для изменения поисковой системы. """
-        settings_dialog = SearchEngineSettings(self)
-        if settings_dialog.exec_() == QDialog.Accepted:
-            self.search_engine = settings_dialog.get_selected_engine()
-            self.search_url = settings_dialog.search_engines[self.search_engine]  # Обновляем search_url
-
-    def change_appearance(self):
-        """ Открывает диалог для изменения внешнего вида. """
-        settings_dialog = AppearanceSettings(self)
-        if settings_dialog.exec_() == QDialog.Accepted:
-            self.theme = settings_dialog.get_selected_theme()
-            self.font = settings_dialog.get_selected_font()
-            self.zoom_level = settings_dialog.get_zoom_level()
-            self.apply_appearance_settings()
-
-    def apply_appearance_settings(self):
-        """ Применяет настройки внешнего вида. """
-        if self.theme == "Тёмная":
-            self.setStyleSheet("""
-                QMainWindow {
-                    background-color: #2d2d2d;
-                    color: #ffffff;
-                }
-                QTabWidget::pane {
-                    border: 1px solid #444;
-                    background-color: #2d2d2d;
-                }
-                QTabBar::tab {
-                    background-color: #444;
-                    color: #ffffff;
-                    padding: 10px;
-                }
-                QTabBar::tab:selected {
-                    background-color: #555;
-                }
-                QToolBar {
-                    background-color: #333;
-                    border: none;
-                }
-                QLineEdit {
-                    background-color: #444;
-                    color: #ffffff;
-                    border: 1px solid #555;
-                    padding: 5px;
-                }
-                QPushButton {
-                    background-color: #555;
-                    color: #ffffff;
-                    border: none;
-                    padding: 5px;
-                }
-                QPushButton:hover {
-                    background-color: #666;
-                }
-                QFrame {
-                    background-color: #2d2d2d;
-                    border: 1px solid #444;
-                }
-            """)
-        else:
-            self.setStyleSheet("")
-
-        self.setFont(self.font)
-        for i in range(self.tabs.count()):
-            widget = self.tabs.widget(i)
-            if isinstance(widget, QWebEngineView):
-                widget.setZoomFactor(self.zoom_level / 100)
+    def play_tab_close_sound(self):
+        """ Воспроизводит звук закрытия вкладки. """
+        self.tab_close_sound.play()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    # Получаем URL из аргументов командной строки
-    url = sys.argv[1] if len(sys.argv) > 1 else None
-    window = BrowserWindow(url)
+    window = BrowserWindow()
     window.show()
     sys.exit(app.exec_())
