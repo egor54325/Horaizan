@@ -17,7 +17,7 @@ Horaizan — это минималистичный веб-браузер с от
 2. Клонируйте репозиторий:
 
    ```bash
-   git clone https://github.com/yourusername/horaizan.git
+   git clone https://github.com/egor54325/Horaizan.git
    cd horaizan
    ```
 
