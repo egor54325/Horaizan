@@ -6,6 +6,8 @@ from PyQt5.QtGui import QIcon, QFont, QClipboard
 import sys
 import pygame
 import requests
+import json
+import random
 import string
 
 
@@ -296,53 +298,13 @@ class HomePage(QWidget):
         clipboard.setText(text)
 
     def generate_username(self):
-        import random
         """ Генерирует случайный логин. """
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
     def generate_password(self):
-        import random
         """ Генерирует случайный пароль. """
         characters = string.ascii_letters + string.digits + string.punctuation
         return ''.join(random.choices(characters, k=12))
-
-    def load_media(self):
-        """ Загружает медиафайл. """
-        options = QFileDialog.Options()
-        file_name, _ = QFileDialog.getOpenFileName(self, "Выберите медиафайл", "", "Media Files (*.mp3 *.mp4 *.wav);;All Files (*)", options=options)
-        if file_name:
-            self.play_media(file_name)
-            self.parent.play_click_sound()  # Воспроизводим звук клика
-
-    def play_media(self, file_path):
-        """ Воспроизводит медиафайл. """
-        player = QMediaPlayer()
-        media_content = QMediaContent(QUrl.fromLocalFile(file_path))
-        player.setMedia(media_content)
-        player.setVolume(100)
-        player.play()
-
-    def translate_text(self):
-        """ Переводит текст с использованием Google Translate API. """
-        text, ok = QInputDialog.getText(self, "Перевод текста", "Введите текст для перевода:")
-        if ok and text:
-            translated_text = self.google_translate(text)
-            QMessageBox.information(self, "Переведенный текст", translated_text)
-            self.parent.play_click_sound()  # Воспроизводим звук клика
-
-    def google_translate(self, text):
-        """ Использует Google Translate API для перевода текста. """
-        api_key = ""  # Замените на свой ключ API
-        url = f"https://translation.googleapis.com/language/translate/v2?key={api_key}"
-        data = {
-            'q': text,
-            'target': 'en'  # Замените на нужный язык
-        }
-        response = requests.post(url, json=data)
-        if response.status_code == 200:
-            return response.json()['data']['translations'][0]['translatedText']
-        else:
-            return "Ошибка перевода"
 
 
 class BrowserTab(QWidget):
@@ -545,7 +507,6 @@ def main():
     window = BrowserWindow()
     window.show()
     sys.exit(app.exec_())
-
 
 if __name__ == "__main__":
     main()
