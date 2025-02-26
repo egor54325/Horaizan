@@ -6,8 +6,6 @@ from PyQt5.QtGui import QIcon, QFont
 import sys
 import pygame
 import requests
-import json
-import random
 import string
 
 
@@ -23,7 +21,8 @@ class SearchEngineSettings(QDialog):
             "Yandex": "https://yandex.ru/search/?text=",
             "DuckDuckGo": "https://duckduckgo.com/?q=",
             "Bing": "https://www.bing.com/search?q=",
-            "Mail.ru": "https://go.mail.ru/search?q="
+            "Mail.ru": "https://go.mail.ru/search?q=",
+            "YouTube": "https://www.youtube.com/results?search_query="
         }
 
         # Выпадающий список для выбора поисковой системы
@@ -286,10 +285,12 @@ class HomePage(QWidget):
         self.parent.play_click_sound()  # Воспроизводим звук клика
 
     def generate_username(self):
+        import random
         """ Генерирует случайный логин. """
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
     def generate_password(self):
+        import random
         """ Генерирует случайный пароль. """
         characters = string.ascii_letters + string.digits + string.punctuation
         return ''.join(random.choices(characters, k=12))
@@ -328,6 +329,8 @@ class HomePage(QWidget):
         }
         response = requests.post(url, json=data)
         if response.status_code == 200:
+            import json
+            
             return response.json()['data']['translations'][0]['translatedText']
         else:
             return "Ошибка перевода"
@@ -348,17 +351,17 @@ class BrowserTab(QWidget):
         self.toolbar.setIconSize(QSize(16, 16))
 
         # Кнопка "Назад"
-        self.back_button = QAction(QIcon("back.png"), "Назад", self)
+        self.back_button = QAction(QIcon("images/back.png"), "Назад", self)
         self.back_button.triggered.connect(self.navigate_back)
         self.toolbar.addAction(self.back_button)
 
         # Кнопка "Вперед"
-        self.forward_button = QAction(QIcon("right.png"), "Вперед", self)
+        self.forward_button = QAction(QIcon("images/right.png"), "Вперед", self)
         self.forward_button.triggered.connect(self.navigate_forward)
         self.toolbar.addAction(self.forward_button)
 
         # Кнопка "Обновить"
-        self.reload_button = QAction(QIcon("reload.png"), "Обновить", self)
+        self.reload_button = QAction(QIcon("images/reload.png"), "Обновить", self)
         self.reload_button.triggered.connect(self.reload_page)
         self.toolbar.addAction(self.reload_button)
 
@@ -368,7 +371,7 @@ class BrowserTab(QWidget):
         self.toolbar.addWidget(self.url_bar)
 
         # Кнопка "Домой"
-        self.home_button = QAction(QIcon("home.png"), "Домой", self)
+        self.home_button = QAction(QIcon("images/home.png"), "Домой", self)
         self.home_button.triggered.connect(self.navigate_home)
         self.toolbar.addAction(self.home_button)
 
@@ -426,9 +429,9 @@ class BrowserWindow(QMainWindow):
 
         # Инициализация звуков
         pygame.mixer.init()
-        self.click_sound = pygame.mixer.Sound("click.mp3")
-        self.tab_open_sound = pygame.mixer.Sound("tab_open.mp3")
-        self.tab_close_sound = pygame.mixer.Sound("tab_close.mp3")
+        self.click_sound = pygame.mixer.Sound("sounds/click.mp3")
+        self.tab_open_sound = pygame.mixer.Sound("sounds/tab_open.mp3")
+        self.tab_close_sound = pygame.mixer.Sound("sounds/tab_close.mp3")
 
         # Основной макет
         self.tabs = QTabWidget()
