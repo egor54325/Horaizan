@@ -24,7 +24,8 @@ class SearchEngineSettings(QDialog):
             "DuckDuckGo": "https://duckduckgo.com/?q=",
             "Bing": "https://www.bing.com/search?q=",
             "Mail.ru": "https://go.mail.ru/search?q=",
-            "YouTube": "https://www.youtube.com/results?search_query="
+            "YouTube": "https://www.youtube.com/results?search_query=",
+            "Wikipedia": "https://wikipedia.org/w/index.php?go=Go&search="
         }
 
         # Выпадающий список для выбора поисковой системы
