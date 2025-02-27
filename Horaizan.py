@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidget, QTabWidget, QPushButton, \
     QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QFrame, QSlider, QFontDialog, QFileDialog
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
-from PyQt5.QtCore import QUrl, QSize, Qt, QLocale
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtCore import QUrl, QSize, Qt
 from PyQt5.QtGui import QIcon, QFont, QClipboard
 import sys
 import pygame
@@ -24,7 +24,8 @@ class SearchEngineSettings(QDialog):
             "DuckDuckGo": "https://duckduckgo.com/?q=",
             "Bing": "https://www.bing.com/search?q=",
             "Mail.ru": "https://go.mail.ru/search?q=",
-            "YouTube": "https://www.youtube.com/results?search_query="
+            "YouTube": "https://www.youtube.com/results?search_query=",
+            "Wikipedia": "https://wikipedia.org/w/index.php?go=Go&search="
         }
 
         # Выпадающий список для выбора поисковой системы
@@ -98,48 +99,6 @@ class AppearanceSettings(QDialog):
     def get_zoom_level(self):
         """ Возвращает уровень масштабирования. """
         return self.zoom_slider.value()
-
-
-class LanguageSettings(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Настройки языка")
-        self.setGeometry(200, 200, 300, 150)
-
-        # Список доступных языков
-        self.languages = {
-            "English": QLocale(QLocale.English),
-            "Русский": QLocale(QLocale.Russian),
-            "Español": QLocale(QLocale.Spanish),
-            "Français": QLocale(QLocale.French),
-            "Deutsch": QLocale(QLocale.German),
-            "中文": QLocale(QLocale.Chinese),
-            "日本語": QLocale(QLocale.Japanese)
-        }
-
-        # Выпадающий список для выбора языка
-        self.language_combo = QComboBox()
-        self.language_combo.addItems(self.languages.keys())
-
-        # Кнопки для подтверждения или отмены
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-
-        # Основной макет
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Выберите язык:"))
-        layout.addWidget(self.language_combo)
-        layout.addWidget(self.button_box)
-        self.setLayout(layout)
-
-    def get_selected_language(self):
-        """ Возвращает выбранный язык. """
-        return self.language_combo.currentText()
-
-    def get_locale(self):
-        """ Возвращает локаль для выбранного языка. """
-        return self.languages[self.language_combo.currentText()]
 
 
 class HomePage(QWidget):
@@ -312,7 +271,7 @@ class HomePage(QWidget):
         username_layout = QHBoxLayout()
         username_label = QLabel(f"Логин: {username}")
         username_layout.addWidget(username_label)
-        copy_username_button = QPushButton("Скопировать")
+        copy_username_button = QPushButton("Копировать")
         copy_username_button.clicked.connect(lambda: self.copy_to_clipboard(username))
         username_layout.addWidget(copy_username_button)
         layout.addLayout(username_layout)
@@ -321,7 +280,7 @@ class HomePage(QWidget):
         password_layout = QHBoxLayout()
         password_label = QLabel(f"Пароль: {password}")
         password_layout.addWidget(password_label)
-        copy_password_button = QPushButton("Скопировать")
+        copy_password_button = QPushButton("Копировать")
         copy_password_button.clicked.connect(lambda: self.copy_to_clipboard(password))
         password_layout.addWidget(copy_password_button)
         layout.addLayout(password_layout)
@@ -397,26 +356,9 @@ class BrowserTab(QWidget):
         else:
             self.browser.setUrl(QUrl("https://www.google.com"))  # Открываем Google по умолчанию
         self.browser.urlChanged.connect(self.update_urlbar)
-        self.browser.urlChanged.connect(self.add_to_history)  # Добавляем URL в историю
-        self.browser.iconChanged.connect(self.update_tab_icon)  # Обновляем иконку вкладки
-        self.browser.titleChanged.connect(self.update_tab_title)  # Обновляем заголовок вкладки
-
-        # Включаем поддержку полноэкранного режима
-        self.browser.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
-        self.browser.page().fullScreenRequested.connect(self.handle_fullscreen_request)
-
         layout.addWidget(self.browser)
 
         self.setLayout(layout)
-
-    def handle_fullscreen_request(self, request):
-        """ Обрабатывает запрос на полноэкранный режим. """
-        if request.toggleOn():
-            self.parent.showFullScreen()
-            request.accept()
-        else:
-            self.parent.showNormal()
-            request.accept()
 
     def navigate_back(self):
         """ Переход на предыдущую страницу. """
@@ -450,25 +392,6 @@ class BrowserTab(QWidget):
         """ Обновление адресной строки при изменении URL. """
         self.url_bar.setText(q.toString())
 
-    def add_to_history(self, q):
-        """ Добавляет URL в историю посещений. """
-        url = q.toString()
-        if url not in self.parent.history:
-            self.parent.history.append(url)
-            self.parent.save_history()  # Сохраняем историю в файл
-
-    def update_tab_icon(self, icon):
-        """ Обновляет иконку вкладки. """
-        index = self.parent.tabs.indexOf(self)
-        self.parent.tabs.setTabIcon(index, icon)
-
-    def update_tab_title(self, title):
-        """ Обновляет заголовок вкладки. """
-        index = self.parent.tabs.indexOf(self)
-        if len(title) > 20:  # Сокращаем длинные названия
-            title = title[:20] + "..."
-        self.parent.tabs.setTabText(index, title)
-
 
 class BrowserWindow(QMainWindow):
     def __init__(self):
@@ -476,18 +399,11 @@ class BrowserWindow(QMainWindow):
         self.setWindowTitle("Horaizan Browser")
         self.setGeometry(100, 100, 1200, 800)
 
-        # Установка иконки браузера
-        self.setWindowIcon(QIcon("images/icon.jpg"))  # Убедитесь, что файл browser_icon.png находится в той же директории
-
         # Инициализация звуков
         pygame.mixer.init()
         self.click_sound = pygame.mixer.Sound("sounds/click.mp3")
         self.tab_open_sound = pygame.mixer.Sound("sounds/tab_open.mp3")
         self.tab_close_sound = pygame.mixer.Sound("sounds/tab_close.mp3")
-
-        # Инициализация истории посещений
-        self.history = []
-        self.load_history()  # Загружаем историю из файла
 
         # Основной макет
         self.tabs = QTabWidget()
@@ -497,10 +413,9 @@ class BrowserWindow(QMainWindow):
             QTabBar::tab {
                 padding: 10px;
                 border-radius: 10px;
-                background-color: #333;
+                background-color: #f0f0f0;
                 margin: 2px;
                 transition: background-color 0.3s;
-                color: #fff;
             }
             QTabBar::tab:selected {
                 background-color: #007BFF;
@@ -509,10 +424,6 @@ class BrowserWindow(QMainWindow):
             QTabBar::tab:hover {
                 background-color: #0056b3;
                 color: #fff;
-            }
-            QTabWidget::pane {
-                border: 1px solid #444;
-                background-color: #222;
             }
         """)
         self.setCentralWidget(self.tabs)
@@ -524,34 +435,19 @@ class BrowserWindow(QMainWindow):
         # Панель меню
         self.init_menu()
 
-        # Переменная для хранения текущей темы
-        self.dark_theme = True
-        self.apply_theme()
-
     def init_menu(self):
         """ Инициализация меню браузера. """
         menubar = self.menuBar()
-        menubar.setStyleSheet("""
-            QMenuBar {
-                background-color: #333;
-                color: #fff;
-            }
-            QMenuBar::item {
-                background-color: transparent;
-                padding: 5px 10px;
-            }
-            QMenuBar::item:selected {
-                background-color: #007BFF;
-            }
-            QMenu {
-                background-color: #333;
-                color: #fff;
-                border: 1px solid #444;
-            }
-            QMenu::item:selected {
-                background-color: #007BFF;
-            }
-        """)
+
+        # Меню "Файл"
+        file_menu = menubar.addMenu("Файл")
+        new_tab_action = QAction("Новая вкладка", self)
+        new_tab_action.triggered.connect(self.add_new_tab)
+        file_menu.addAction(new_tab_action)
+
+        exit_action = QAction("Выход", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
 
         # Меню "Настройки"
         settings_menu = menubar.addMenu("Настройки")
@@ -562,207 +458,6 @@ class BrowserWindow(QMainWindow):
         appearance_action = QAction("Внешний вид", self)
         appearance_action.triggered.connect(self.set_appearance)
         settings_menu.addAction(appearance_action)
-
-        # Меню для смены языка
-        language_action = QAction("Язык", self)
-        language_action.triggered.connect(self.set_language)
-        settings_menu.addAction(language_action)
-
-        # Меню для смены темы
-        theme_action = QAction("Сменить тему", self)
-        theme_action.triggered.connect(self.toggle_theme)
-        settings_menu.addAction(theme_action)
-
-        # Меню для просмотра истории
-        history_action = QAction("История", self)
-        history_action.triggered.connect(self.show_history)
-        menubar.addAction(history_action)
-
-    def set_language(self):
-        """ Открывает диалог настройки языка. """
-        language_dialog = LanguageSettings(self)
-        if language_dialog.exec_():
-            selected_language = language_dialog.get_selected_language()
-            locale = language_dialog.get_locale()
-            QLocale.setDefault(locale)
-            QMessageBox.information(self, "Успех", f"Выбран язык: {selected_language}")
-            self.play_click_sound()  # Воспроизводим звук клика
-
-    def toggle_theme(self):
-        """ Переключает между светлой и тёмной темами. """
-        self.dark_theme = not self.dark_theme
-        self.apply_theme()
-
-    def apply_theme(self):
-        """ Применяет текущую тему (светлую или тёмную). """
-        if self.dark_theme:
-            self.setStyleSheet("""
-                QWidget {
-                    background-color: #222;
-                    color: #fff;
-                }
-                QLineEdit {
-                    background-color: #333;
-                    color: #fff;
-                    border: 1px solid #444;
-                    padding: 5px;
-                }
-                QPushButton {
-                    background-color: #007BFF;
-                    color: #fff;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 5px;
-                }
-                QPushButton:hover {
-                    background-color: #0056b3;
-                }
-                QToolBar {
-                    background-color: #333;
-                    border: none;
-                }
-                QToolButton {
-                    background-color: transparent;
-                    color: #fff;
-                }
-                QToolButton:hover {
-                    background-color: #007BFF;
-                }
-                QMessageBox {
-                    background-color: #222;
-                    color: #fff;
-                }
-                QMessageBox QLabel {
-                    color: #fff;
-                }
-                QMessageBox QPushButton {
-                    background-color: #007BFF;
-                    color: #fff;
-                }
-                QMessageBox QPushButton:hover {
-                    background-color: #0056b3;
-                }
-                QDialog {
-                    background-color: #222;
-                    color: #fff;
-                }
-                QDialog QLabel {
-                    color: #fff;
-                }
-                QDialog QPushButton {
-                    background-color: #007BFF;
-                    color: #fff;
-                }
-                QDialog QPushButton:hover {
-                    background-color: #0056b3;
-                }
-                QComboBox {
-                    background-color: #333;
-                    color: #fff;
-                    border: 1px solid #444;
-                    padding: 5px;
-                }
-                QComboBox QAbstractItemView {
-                    background-color: #333;
-                    color: #fff;
-                }
-                QSlider::groove:horizontal {
-                    background-color: #444;
-                    height: 8px;
-                    border-radius: 4px;
-                }
-                QSlider::handle:horizontal {
-                    background-color: #007BFF;
-                    width: 20px;
-                    height: 20px;
-                    margin: -6px 0;
-                    border-radius: 10px;
-                }
-            """)
-        else:
-            self.setStyleSheet("""
-                QWidget {
-                    background-color: #fff;
-                    color: #000;
-                }
-                QLineEdit {
-                    background-color: #f0f0f0;
-                    color: #000;
-                    border: 1px solid #ccc;
-                    padding: 5px;
-                }
-                QPushButton {
-                    background-color: #007BFF;
-                    color: #fff;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 5px;
-                }
-                QPushButton:hover {
-                    background-color: #0056b3;
-                }
-                QToolBar {
-                    background-color: #f0f0f0;
-                    border: none;
-                }
-                QToolButton {
-                    background-color: transparent;
-                    color: #000;
-                }
-                QToolButton:hover {
-                    background-color: #007BFF;
-                }
-                QMessageBox {
-                    background-color: #fff;
-                    color: #000;
-                }
-                QMessageBox QLabel {
-                    color: #000;
-                }
-                QMessageBox QPushButton {
-                    background-color: #007BFF;
-                    color: #fff;
-                }
-                QMessageBox QPushButton:hover {
-                    background-color: #0056b3;
-                }
-                QDialog {
-                    background-color: #fff;
-                    color: #000;
-                }
-                QDialog QLabel {
-                    color: #000;
-                }
-                QDialog QPushButton {
-                    background-color: #007BFF;
-                    color: #fff;
-                }
-                QDialog QPushButton:hover {
-                    background-color: #0056b3;
-                }
-                QComboBox {
-                    background-color: #f0f0f0;
-                    color: #000;
-                    border: 1px solid #ccc;
-                    padding: 5px;
-                }
-                QComboBox QAbstractItemView {
-                    background-color: #f0f0f0;
-                    color: #000;
-                }
-                QSlider::groove:horizontal {
-                    background-color: #ccc;
-                    height: 8px;
-                    border-radius: 4px;
-                }
-                QSlider::handle:horizontal {
-                    background-color: #007BFF;
-                    width: 20px;
-                    height: 20px;
-                    margin: -6px 0;
-                    border-radius: 10px;
-                }
-            """)
 
     def add_new_tab(self):
         """ Добавляет новую вкладку. """
@@ -805,72 +500,14 @@ class BrowserWindow(QMainWindow):
         self.tab_open_sound.play()
 
     def play_tab_close_sound(self):
-        """ Воспроизводит звук закрытия вкладки. """
+        """ Воспроизводит звук закрытия вкладка. """
         self.tab_close_sound.play()
-
-    def load_history(self):
-        """ Загружает историю посещений из файла. """
-        try:
-            with open("history.json", "r") as file:
-                self.history = json.load(file)
-        except FileNotFoundError:
-            self.history = []
-
-    def save_history(self):
-        """ Сохраняет историю посещений в файл. """
-        with open("history.json", "w") as file:
-            json.dump(self.history, file)
-
-    def show_history(self):
-        """ Показывает историю посещений. """
-        history_dialog = QDialog(self)
-        history_dialog.setWindowTitle("История посещений")
-        history_dialog.setMinimumSize(400, 300)
-
-        layout = QVBoxLayout()
-
-        # Список истории
-        history_list = QComboBox()
-        history_list.addItems(self.history)
-        layout.addWidget(history_list)
-
-        # Кнопка для перехода к выбранному URL
-        go_button = QPushButton("Перейти")
-        go_button.clicked.connect(lambda: self.navigate_to_history_url(history_list.currentText()))
-        layout.addWidget(go_button)
-
-        # Кнопка для очистки истории
-        clear_button = QPushButton("Очистить историю")
-        clear_button.clicked.connect(self.clear_history)
-        layout.addWidget(clear_button)
-
-        # Кнопка закрытия
-        close_button = QPushButton("Закрыть")
-        close_button.clicked.connect(history_dialog.close)
-        layout.addWidget(close_button)
-
-        history_dialog.setLayout(layout)
-        history_dialog.exec_()
-
-    def navigate_to_history_url(self, url):
-        """ Переходит к выбранному URL из истории. """
-        self.tabs.addTab(BrowserTab(self, url), "Новая вкладка")
-        self.tabs.setCurrentIndex(self.tabs.count() - 1)
-        self.play_tab_open_sound()  # Воспроизводим звук открытия вкладки
-
-    def clear_history(self):
-        """ Очищает историю посещений. """
-        self.history = []
-        self.save_history()
-        QMessageBox.information(self, "Успех", "История очищена.")
-
 
 def main():
     app = QApplication(sys.argv)
     window = BrowserWindow()
     window.show()
     sys.exit(app.exec_())
-
 
 if __name__ == "__main__":
     main()
