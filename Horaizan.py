@@ -1,16 +1,10 @@
 from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidget, QTabWidget, QPushButton, \
-    QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QFrame, QSlider, \
-    QFontDialog, QFileDialog, QTabBar, QListWidget, QListWidgetItem, QPlainTextEdit, QTextEdit
+    QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QTabBar
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
-from PyQt5.QtCore import QUrl, QSize, Qt, QLocale, QByteArray, QBuffer
-from PyQt5.QtGui import QIcon, QFont, QClipboard, QPixmap
-import sys
+from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer
+from PyQt5.QtGui import QIcon
 import pygame
-import requests
 import json
-import random
-import string
-
 
 class SearchEngineSettings(QDialog):
     def __init__(self, parent=None):
@@ -259,12 +253,17 @@ class HomePage(QWidget):
 
     def generate_username(self):
         """ Генерирует случайный логин. """
+        import random
+        import string
+
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
     def generate_password(self):
         """ Генерирует случайный пароль. """
-        characters = string.ascii_letters + string.digits + string.punctuation
-        return ''.join(random.choices(characters, k=12))
+        import random
+        import string
+
+        return ''.join(random.choices(string.ascii_letters + string.digits + string.punctuation, k=12))
 
 
 class BrowserTab(QWidget):
@@ -865,6 +864,8 @@ class BrowserWindow(QMainWindow):
                 self.history = [entry if isinstance(entry, dict) else {'url': entry, 'title': None, 'icon_data': None} for entry in self.history]
         except FileNotFoundError:
             self.history = []
+            with open("history.json", 'w') as f:
+                f.write("[]")
 
     def save_history(self):
         """ Сохраняет историю посещений в файл. """
@@ -963,6 +964,7 @@ class BrowserWindow(QMainWindow):
             current_tab.browser.page().runJavaScript(code, callback)
 
 def main():
+    import sys
     app = QApplication(sys.argv)
     window = BrowserWindow()
     window.show()
