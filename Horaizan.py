@@ -1,11 +1,10 @@
 from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidget, QTabWidget, QPushButton, \
     QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QTabBar, \
     QListWidget, QListWidgetItem, QPlainTextEdit, QTextEdit, QFileDialog
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineProfile, QWebEngineDownloadItem
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineDownloadItem
 from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
 from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtMultimedia import QSound  # Добавлено для использования QSound
-import os
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import json
 
 class SearchEngineSettings(QDialog):
@@ -66,6 +65,9 @@ class HomePage(QWidget):
         self.web_view.setHtml(self.get_animation_html())
         layout.addWidget(self.web_view)
 
+        # Подключаем обработчик изменения URL
+        self.web_view.urlChanged.connect(self.check_easter_egg)
+
         # Поле для ввода URL
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText(self.parent.tr("Enter URL or query..."))
@@ -105,7 +107,7 @@ class HomePage(QWidget):
         self.search_button.setText(self.parent.tr("Search"))
 
     def get_animation_html(self):
-        """ Возвращает HTML-код с тёмным градиентом на заднем фоне. """
+        """ Возвращает HTML-код с тёмным градиентом на заднем фоне и обработкой клика на заголовке. """
         return """
         <!DOCTYPE html>
         <html lang="ru">
@@ -122,7 +124,6 @@ class HomePage(QWidget):
                     font-family: 'Arial', sans-serif;
                     background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
                 }
-                /* Остальные стили остаются без изменений */
                 .title {
                     font-size: 80px;
                     font-weight: bold;
@@ -130,14 +131,37 @@ class HomePage(QWidget):
                     text-align: center;
                     padding-top: 200px;
                     text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+                    cursor: pointer;
                 }
             </style>
         </head>
         <body>
-            <div class="title">Horaizan Browser</div>
+            <div class="title" onclick="window.location.href='https://youtu.be/dQw4w9WgXcQ'">Horaizan Browser</div>
         </body>
         </html>
         """
+
+    def check_easter_egg(self, url):
+        """ Проверяет, если URL соответствует пасхалке. """
+        if url.toString() == 'https://youtu.be/dQw4w9WgXcQ':
+            self.display_meme()
+
+    def display_meme(self):
+        """ Отображает мем и проигрывает звук. """
+        # Показываем изображение в диалоговом окне
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Meme")
+        layout = QVBoxLayout()
+        label = QLabel()
+        pixmap = QPixmap("images/meme.png")
+        label.setPixmap(pixmap)
+        layout.addWidget(label)
+        dialog.setLayout(layout)
+        dialog.exec_()
+        # Проигрываем звук
+        self.meme_sound = QMediaPlayer()
+        self.meme_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/meme_sound.ogg")))
+        self.meme_sound.play()
 
     def perform_search(self):
         """ Выполняет поиск по введенному запросу или открывает URL. """
@@ -365,8 +389,8 @@ class BrowserTab(QWidget):
     def update_tab_title(self, title):
         """ Обновляет заголовок вкладки. """
         index = self.parent.tabs.indexOf(self)
-        if len(title) > 20:  # Сокращаем длинные названия
-            title = title[:20] + "..."
+        if len(title) > 25:  # Сокращаем длинные названия
+            title = title[:25] + ".."
         self.parent.tabs.setTabText(index, title)
 
     def on_download_requested(self, download):
@@ -377,7 +401,6 @@ class BrowserTab(QWidget):
         if path:
             download.setPath(path)
             download.accept()
-            download.finished.connect(lambda: self.parent.download_finished(download))
 
     def closeEvent(self, event):
         """ Обрабатывает закрытие вкладки - останавливает медиа контент. """
@@ -481,10 +504,13 @@ class BrowserWindow(QMainWindow):
         self.setWindowIcon(QIcon("images/icon.jpg"))  # Убедитесь, что файл icon.jpg находится в той же директории
 
         # Инициализация звуков
-        # Используем QSound вместо pygame
-        self.click_sound = QSound("sounds/click.mp3")
-        self.tab_open_sound = QSound("sounds/tab_open.mp3")
-        self.tab_close_sound = QSound("sounds/tab_close.mp3")
+        # Используем QMediaPlayer вместо QSound
+        self.click_sound = QMediaPlayer()
+        self.click_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/click.mp3")))
+        self.tab_open_sound = QMediaPlayer()
+        self.tab_open_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/tab_open.mp3")))
+        self.tab_close_sound = QMediaPlayer()
+        self.tab_close_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/tab_close.mp3")))
 
         # Инициализация истории посещений
         self.history = []
