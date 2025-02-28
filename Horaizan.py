@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidget, QTabWidget, QPushButton, \
-    QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QTabBar
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
-from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer
-from PyQt5.QtGui import QIcon
+    QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QTabBar, \
+    QListWidget, QListWidgetItem, QPlainTextEdit, QTextEdit, QFileDialog
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineProfile, QWebEngineDownloadItem
+from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
+from PyQt5.QtGui import QIcon, QPixmap
 import pygame
 import json
 
@@ -103,91 +104,121 @@ class HomePage(QWidget):
         self.search_button.setText(self.parent.tr("Search"))
 
     def get_animation_html(self):
-        """ Возвращает HTML-код с анимацией текста и градиентным фоном с летающими объектами. """
+        """ Возвращает HTML-код с параллакс-эффектом, анимированные иконки и эффект частиц. """
         return """
         <!DOCTYPE html>
         <html lang="ru">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Horaizan</title>
             <style>
-                body {
+                /* Стили для параллакс-эффекта */
+                body, html {
                     margin: 0;
                     padding: 0;
-                    overflow: hidden;
-                    background: linear-gradient(135deg, #1e3c72, #2a5298);
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
+                    height: 100%;
+                    overflow-x: hidden;
                     font-family: 'Arial', sans-serif;
                 }
-
+                .parallax {
+                    perspective: 1px;
+                    height: 100vh;
+                    overflow-x: hidden;
+                    overflow-y: auto;
+                }
+                .parallax__layer {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    bottom: 0;
+                    left: 0;
+                }
+                .parallax__layer--base {
+                    transform: translateZ(0);
+                }
+                .parallax__layer--back {
+                    transform: translateZ(-1px) scale(2);
+                }
+                /* Эффекты частиц */
+                .particles {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    overflow: hidden;
+                    z-index: -1;
+                }
+                .particle {
+                    position: absolute;
+                    background-color: rgba(255, 255, 255, 0.2);
+                    border-radius: 50%;
+                    animation: floatParticle 10s infinite ease-in-out;
+                }
+                @keyframes floatParticle {
+                    0% { transform: translateY(0); opacity: 1; }
+                    50% { transform: translateY(-100px); opacity: 0.5; }
+                    100% { transform: translateY(0); opacity: 1; }
+                }
+                /* Анимированные иконки при наведении */
+                .icon {
+                    width: 50px;
+                    height: 50px;
+                    background-color: #007BFF;
+                    margin: 20px;
+                    border-radius: 50%;
+                    display: inline-block;
+                    transition: transform 0.3s;
+                }
+                .icon:hover {
+                    transform: scale(1.2) rotate(360deg);
+                }
+                /* Стиль заголовка */
                 .title {
                     font-size: 80px;
                     font-weight: bold;
                     color: #fff;
                     text-align: center;
-                    animation: float 3s infinite ease-in-out, glow 2s infinite alternate;
-                    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.1);
-                }
-
-                .subtitle {
-                    font-size: 24px;
-                    font-weight: normal;
-                    color: #ccc;
-                    text-align: center;
-                    animation: fadeIn 2s ease-in-out infinite alternate;
-                    cursor: pointer;  /* Добавляем указатель для курсора */
-                }
-
-                .object {
-                    position: absolute;
-                    width: 20px;
-                    height: 20px;
-                    background-color: rgba(255, 255, 255, 0.2);
-                    border-radius: 50%;
-                    animation: floatObject 10s infinite ease-in-out;
-                }
-
-                @keyframes float {
-                    0% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                    100% { transform: translateY(0); }
-                }
-
-                @keyframes glow {
-                    0% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.1); }
-                    100% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(255, 255, 255, 0.2); }
-                }
-
-                @keyframes fadeIn {
-                    0% { opacity: 0.5; }
-                    100% { opacity: 1; }
-                }
-
-                @keyframes floatObject {
-                    0% { transform: translate(0, 0); }
-                    50% { transform: translate(100px, 100px); }
-                    100% { transform: translate(0, 0); }
+                    padding-top: 200px;
+                    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
                 }
             </style>
         </head>
         <body>
-            <div class="title">Horaizan</div>
-            <div class="subtitle" onclick="showMeme()">By Xarays & Wonordel</div>
-            <div class="object" style="top: 10%; left: 20%;"></div>
-            <div class="object" style="top: 30%; left: 50%;"></div>
-            <div class="object" style="top: 50%; left: 80%;"></div>
-            <script>
-                function showMeme() {
-                    alert("Horaizan - лучший браузер!");
-                }
-            </script>
+            <div class="parallax">
+                <div class="parallax__layer parallax__layer--back">
+                    <div class="particles">
+                        <!-- Генерация множества частиц -->
+                        """ + self.generate_particles_html() + """
+                    </div>
+                </div>
+                <div class="parallax__layer parallax__layer--base">
+                    <div class="title">Horaizan Browser</div>
+                    <div style="text-align:center;">
+                        <!-- Анимированные иконки -->
+                        <div class="icon"></div>
+                        <div class="icon"></div>
+                        <div class="icon"></div>
+                    </div>
+                </div>
+            </div>
         </body>
         </html>
         """
+
+    def generate_particles_html(self):
+        """ Генерирует HTML-код для частиц. """
+        particles_html = ''
+        for _ in range(100):
+            import random
+            size = random.randint(1, 5)
+            x = random.randint(0, 100)
+            y = random.randint(0, 100)
+            duration = random.uniform(5, 15)
+            particles_html += f'''
+            <div class="particle" style="width:{size}px; height:{size}px; left:{x}%; top:{y}%; animation-duration:{duration}s;"></div>
+            '''
+        return particles_html
 
     def perform_search(self):
         """ Выполняет поиск по введенному запросу или открывает URL. """
@@ -309,6 +340,10 @@ class BrowserTab(QWidget):
 
         # Веб-просмотрщик
         self.browser = QWebEngineView()
+
+        # Обработка загрузки файлов
+        self.browser.page().profile().downloadRequested.connect(self.on_download_requested)
+
         if url:
             self.browser.setUrl(QUrl(url))
         else:
@@ -392,7 +427,7 @@ class BrowserTab(QWidget):
         url = self.browser.url().toString()
         for entry in self.parent.history:
             if entry['url'] == url:
-                # Save icon data as bytes
+                # Сохраняем данные иконки в виде байтов
                 pixmap = icon.pixmap(16, 16)
                 if not pixmap.isNull():
                     buffer = QBuffer()
@@ -414,6 +449,16 @@ class BrowserTab(QWidget):
         if len(title) > 20:  # Сокращаем длинные названия
             title = title[:20] + "..."
         self.parent.tabs.setTabText(index, title)
+
+    def on_download_requested(self, download):
+        """ Обрабатывает запрос на загрузку файла. """
+        suggested_path = download.suggestedFileName()
+        # Открываем диалог сохранения файла
+        path, _ = QFileDialog.getSaveFileName(self, self.parent.tr("Save File"), suggested_path)
+        if path:
+            download.setPath(path)
+            download.accept()
+            download.finished.connect(lambda: self.parent.download_finished(download))
 
 
 class BrowserWindow(QMainWindow):
@@ -452,6 +497,9 @@ class BrowserWindow(QMainWindow):
             'Enter URL or query...': 'Enter URL or query...',
             'Enter search query...': 'Enter search query...',
             'Search': 'Search',
+            'Save File': 'Save File',
+            'Download completed: {path}': 'Download completed: {path}',
+            'Cannot download file.': 'Cannot download file.',
         },
         'ru': {
             'Settings': 'Настройки',
@@ -486,13 +534,16 @@ class BrowserWindow(QMainWindow):
             'Select a search engine:': 'Выберите поисковую систему:',
             'Enter URL or query...': 'Введите URL или запрос...',
             'Enter search query...': 'Введите запрос для поиска...',
-            'Search': 'Перейти к поиску',
+            'Search': 'Поиск',
+            'Save File': 'Сохранить файл',
+            'Download completed: {path}': 'Загрузка завершена: {path}',
+            'Cannot download file.': 'Не удалось загрузить файл.',
         }
     }
 
     def __init__(self):
         super().__init__()
-        self.language = 'en'  # Язык по умолчанию - английский
+        self.language = 'ru'  # Устанавливаем язык по умолчанию - русский
         self.setWindowTitle("Horaizan Browser")
         self.setGeometry(100, 100, 1200, 800)
 
@@ -611,7 +662,7 @@ class BrowserWindow(QMainWindow):
         self.console_action.triggered.connect(self.open_developer_console)
         self.settings_menu.addAction(self.console_action)
 
-        # Language submenu
+        # Подменю "Язык"
         self.language_menu = self.settings_menu.addMenu(self.tr("Language"))
         self.english_action = QAction("English", self)
         self.english_action.triggered.connect(lambda: self.switch_language('en'))
@@ -886,7 +937,7 @@ class BrowserWindow(QMainWindow):
             item = QListWidgetItem()
             title = entry.get('title') or entry['url']
             item.setText(title)
-            # If icon data is available, set icon
+            # Если доступны данные иконки, то устанавливаем иконку
             icon_data = entry.get('icon_data')
             if icon_data:
                 pixmap = QPixmap()
@@ -934,12 +985,12 @@ class BrowserWindow(QMainWindow):
 
         layout = QVBoxLayout()
 
-        # Text editor for JavaScript code
+        # Текстовый редактор для JavaScript-кода
         code_editor = QPlainTextEdit()
         code_editor.setPlaceholderText(self.tr("Enter JavaScript code here..."))
         layout.addWidget(code_editor)
 
-        # Button to run the code
+        # Кнопка для выполнения кода
         run_button = QPushButton(self.tr("Run JavaScript"))
         layout.addWidget(run_button)
 
@@ -962,6 +1013,13 @@ class BrowserWindow(QMainWindow):
             def callback(result):
                 output_widget.append(str(result))
             current_tab.browser.page().runJavaScript(code, callback)
+
+    def download_finished(self, download):
+        """ Обрабатывает завершение загрузки файла. """
+        if download.state() == QWebEngineDownloadItem.DownloadCompleted:
+            QMessageBox.information(self, self.tr("Success"), self.tr("Download completed: {path}").format(path=download.path()))
+        else:
+            QMessageBox.warning(self, self.tr("Error"), self.tr("Cannot download file."))
 
 def main():
     import sys
