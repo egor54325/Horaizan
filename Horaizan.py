@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidg
     QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QTabBar, \
     QListWidget, QListWidgetItem, QPlainTextEdit, QTextEdit, QFileDialog
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineDownloadItem
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineDownloadItem
 from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
@@ -496,7 +497,7 @@ class BrowserWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.language = 'ru'  # Устанавливаем язык по умолчанию - русский
+        self.language = 'en'  # Устанавливаем язык по умолчанию - русский
         self.setWindowTitle("Horaizan Browser")
         self.setGeometry(100, 100, 1200, 800)
 
