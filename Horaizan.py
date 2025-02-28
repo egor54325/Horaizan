@@ -4,7 +4,8 @@ from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidg
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineProfile, QWebEngineDownloadItem
 from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
 from PyQt5.QtGui import QIcon, QPixmap
-import pygame
+from PyQt5.QtMultimedia import QSound  # Добавлено для использования QSound
+import os
 import json
 
 class SearchEngineSettings(QDialog):
@@ -104,7 +105,7 @@ class HomePage(QWidget):
         self.search_button.setText(self.parent.tr("Search"))
 
     def get_animation_html(self):
-        """ Возвращает HTML-код с параллакс-эффектом, анимированные иконки и эффект частиц. """
+        """ Возвращает HTML-код с тёмным градиентом на заднем фоне. """
         return """
         <!DOCTYPE html>
         <html lang="ru">
@@ -112,68 +113,16 @@ class HomePage(QWidget):
             <meta charset="UTF-8">
             <title>Horaizan</title>
             <style>
-                /* Стили для параллакс-эффекта */
+                /* Стили для градиентного фона */
                 body, html {
                     margin: 0;
                     padding: 0;
                     height: 100%;
                     overflow-x: hidden;
                     font-family: 'Arial', sans-serif;
+                    background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
                 }
-                .parallax {
-                    perspective: 1px;
-                    height: 100vh;
-                    overflow-x: hidden;
-                    overflow-y: auto;
-                }
-                .parallax__layer {
-                    position: absolute;
-                    top: 0;
-                    right: 0;
-                    bottom: 0;
-                    left: 0;
-                }
-                .parallax__layer--base {
-                    transform: translateZ(0);
-                }
-                .parallax__layer--back {
-                    transform: translateZ(-1px) scale(2);
-                }
-                /* Эффекты частиц */
-                .particles {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    overflow: hidden;
-                    z-index: -1;
-                }
-                .particle {
-                    position: absolute;
-                    background-color: rgba(255, 255, 255, 0.2);
-                    border-radius: 50%;
-                    animation: floatParticle 10s infinite ease-in-out;
-                }
-                @keyframes floatParticle {
-                    0% { transform: translateY(0); opacity: 1; }
-                    50% { transform: translateY(-100px); opacity: 0.5; }
-                    100% { transform: translateY(0); opacity: 1; }
-                }
-                /* Анимированные иконки при наведении */
-                .icon {
-                    width: 50px;
-                    height: 50px;
-                    background-color: #007BFF;
-                    margin: 20px;
-                    border-radius: 50%;
-                    display: inline-block;
-                    transition: transform 0.3s;
-                }
-                .icon:hover {
-                    transform: scale(1.2) rotate(360deg);
-                }
-                /* Стиль заголовка */
+                /* Остальные стили остаются без изменений */
                 .title {
                     font-size: 80px;
                     font-weight: bold;
@@ -185,40 +134,10 @@ class HomePage(QWidget):
             </style>
         </head>
         <body>
-            <div class="parallax">
-                <div class="parallax__layer parallax__layer--back">
-                    <div class="particles">
-                        <!-- Генерация множества частиц -->
-                        """ + self.generate_particles_html() + """
-                    </div>
-                </div>
-                <div class="parallax__layer parallax__layer--base">
-                    <div class="title">Horaizan Browser</div>
-                    <div style="text-align:center;">
-                        <!-- Анимированные иконки -->
-                        <div class="icon"></div>
-                        <div class="icon"></div>
-                        <div class="icon"></div>
-                    </div>
-                </div>
-            </div>
+            <div class="title">Horaizan Browser</div>
         </body>
         </html>
         """
-
-    def generate_particles_html(self):
-        """ Генерирует HTML-код для частиц. """
-        particles_html = ''
-        for _ in range(100):
-            import random
-            size = random.randint(1, 5)
-            x = random.randint(0, 100)
-            y = random.randint(0, 100)
-            duration = random.uniform(5, 15)
-            particles_html += f'''
-            <div class="particle" style="width:{size}px; height:{size}px; left:{x}%; top:{y}%; animation-duration:{duration}s;"></div>
-            '''
-        return particles_html
 
     def perform_search(self):
         """ Выполняет поиск по введенному запросу или открывает URL. """
@@ -460,6 +379,15 @@ class BrowserTab(QWidget):
             download.accept()
             download.finished.connect(lambda: self.parent.download_finished(download))
 
+    def closeEvent(self, event):
+        """ Обрабатывает закрытие вкладки - останавливает медиа контент. """
+        # Останавливаем воспроизведение медиа
+        self.browser.page().runJavaScript("var videos = document.querySelectorAll('video');"
+                                          "videos.forEach(function(video) { video.pause(); });"
+                                          "var audios = document.querySelectorAll('audio');"
+                                          "audios.forEach(function(audio) { audio.pause(); });")
+        event.accept()
+
 
 class BrowserWindow(QMainWindow):
     translations = {
@@ -500,6 +428,7 @@ class BrowserWindow(QMainWindow):
             'Save File': 'Save File',
             'Download completed: {path}': 'Download completed: {path}',
             'Cannot download file.': 'Cannot download file.',
+            'History is empty.': 'History is empty.',
         },
         'ru': {
             'Settings': 'Настройки',
@@ -538,6 +467,7 @@ class BrowserWindow(QMainWindow):
             'Save File': 'Сохранить файл',
             'Download completed: {path}': 'Загрузка завершена: {path}',
             'Cannot download file.': 'Не удалось загрузить файл.',
+            'History is empty.': 'История пуста.',
         }
     }
 
@@ -551,10 +481,10 @@ class BrowserWindow(QMainWindow):
         self.setWindowIcon(QIcon("images/icon.jpg"))  # Убедитесь, что файл icon.jpg находится в той же директории
 
         # Инициализация звуков
-        pygame.mixer.init()
-        self.click_sound = pygame.mixer.Sound("sounds/click.mp3")
-        self.tab_open_sound = pygame.mixer.Sound("sounds/tab_open.mp3")
-        self.tab_close_sound = pygame.mixer.Sound("sounds/tab_close.mp3")
+        # Используем QSound вместо pygame
+        self.click_sound = QSound("sounds/click.mp3")
+        self.tab_open_sound = QSound("sounds/tab_open.mp3")
+        self.tab_close_sound = QSound("sounds/tab_close.mp3")
 
         # Инициализация истории посещений
         self.history = []
@@ -878,9 +808,12 @@ class BrowserWindow(QMainWindow):
 
     def close_tab(self, index):
         """ Закрывает вкладку. """
-        if self.tabs.widget(index) == self.home_page:
+        widget = self.tabs.widget(index)
+        if widget == self.home_page:
             QMessageBox.warning(self, self.tr("Error"), self.tr("Cannot close home page."))
         elif self.tabs.count() > 1:
+            # Удаляем вкладку и останавливаем звуки
+            widget.deleteLater()
             self.tabs.removeTab(index)
             self.play_tab_close_sound()  # Воспроизводим звук закрытия вкладки
         else:
@@ -913,7 +846,7 @@ class BrowserWindow(QMainWindow):
                 self.history = json.load(file)
                 # Убедимся, что история содержит только словари
                 self.history = [entry if isinstance(entry, dict) else {'url': entry, 'title': None, 'icon_data': None} for entry in self.history]
-        except FileNotFoundError:
+        except (FileNotFoundError, json.JSONDecodeError):
             self.history = []
             with open("history.json", 'w') as f:
                 f.write("[]")
@@ -925,6 +858,10 @@ class BrowserWindow(QMainWindow):
 
     def show_history(self):
         """ Показывает историю посещений. """
+        if not self.history:
+            QMessageBox.information(self, self.tr("History"), self.tr("History is empty."))
+            return
+
         history_dialog = QDialog(self)
         history_dialog.setWindowTitle(self.tr("History"))
         history_dialog.setMinimumSize(400, 300)
