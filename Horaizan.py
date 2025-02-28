@@ -1,11 +1,10 @@
 from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidget, QTabWidget, QPushButton, \
     QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QTabBar, \
     QListWidget, QListWidgetItem, QPlainTextEdit, QTextEdit, QFileDialog
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineProfile, QWebEngineDownloadItem
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineDownloadItem
 from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
 from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtMultimedia import QSound  # Добавлено для использования QSound
-import os
+from PyQt5.QtMultimedia import QSound
 import json
 
 class SearchEngineSettings(QDialog):
@@ -482,9 +481,9 @@ class BrowserWindow(QMainWindow):
 
         # Инициализация звуков
         # Используем QSound вместо pygame
-        self.click_sound = QSound("sounds/click.mp3")
-        self.tab_open_sound = QSound("sounds/tab_open.mp3")
-        self.tab_close_sound = QSound("sounds/tab_close.mp3")
+        self.click_sound = QSound("sounds/click.wav")
+        self.tab_open_sound = QSound("sounds/tab_open.wav")
+        self.tab_close_sound = QSound("sounds/tab_close.wav")
 
         # Инициализация истории посещений
         self.history = []
