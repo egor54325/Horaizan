@@ -6,7 +6,10 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEng
 from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+<<<<<<< HEAD
 import os
+=======
+>>>>>>> a95706eb0e9fef69afc94741cebc9ddcf316e445
 import json
 import sys
 
@@ -169,7 +172,11 @@ class HomePage(QWidget):
         dialog.exec_()
         # Проигрываем звук
         self.meme_sound = QMediaPlayer()
+<<<<<<< HEAD
         self.meme_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/meme_sound.ogg"))))
+=======
+        self.meme_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/meme_sound.ogg")))
+>>>>>>> a95706eb0e9fef69afc94741cebc9ddcf316e445
         self.meme_sound.play()
 
     def perform_search(self):
@@ -515,11 +522,19 @@ class BrowserWindow(QMainWindow):
         # Инициализация звуков
         # Используем QMediaPlayer вместо QSound
         self.click_sound = QMediaPlayer()
+<<<<<<< HEAD
         self.click_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/click.mp3"))))
         self.tab_open_sound = QMediaPlayer()
         self.tab_open_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/tab_open.mp3"))))
         self.tab_close_sound = QMediaPlayer()
         self.tab_close_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/tab_close.mp3"))))
+=======
+        self.click_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/click.mp3")))
+        self.tab_open_sound = QMediaPlayer()
+        self.tab_open_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/tab_open.mp3")))
+        self.tab_close_sound = QMediaPlayer()
+        self.tab_close_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/tab_close.mp3")))
+>>>>>>> a95706eb0e9fef69afc94741cebc9ddcf316e445
 
         # Инициализация истории посещений
         self.history = []
