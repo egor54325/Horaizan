@@ -7,8 +7,9 @@ from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import os
-import json
+from history import *
 import sys
+
 
 def real_path(relative):
     if hasattr(sys, '_MEIPASS'):
@@ -117,38 +118,8 @@ class HomePage(QWidget):
 
     def get_animation_html(self):
         """ Возвращает HTML-код с тёмным градиентом на заднем фоне и обработкой клика на заголовке. """
-        return """
-        <!DOCTYPE html>
-        <html lang="ru">
-        <head>
-            <meta charset="UTF-8">
-            <title>Horaizan</title>
-            <style>
-                /* Стили для градиентного фона */
-                body, html {
-                    margin: 0;
-                    padding: 0;
-                    height: 100%;
-                    overflow-x: hidden;
-                    font-family: 'Arial', sans-serif;
-                    background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
-                }
-                .title {
-                    font-size: 80px;
-                    font-weight: bold;
-                    color: #fff;
-                    text-align: center;
-                    padding-top: 200px;
-                    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-                    cursor: pointer;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="title" onclick="window.location.href='https://youtu.be/dQw4w9WgXcQ'">Horaizan Browser</div>
-        </body>
-        </html>
-        """
+        with open(real_path("animation_html.html"), 'r') as f:
+            return f.read()
 
     def check_easter_egg(self, url):
         """ Проверяет, если URL соответствует пасхалке. """
@@ -584,26 +555,26 @@ class BrowserWindow(QMainWindow):
         """ Инициализация меню браузера. """
         menubar = self.menuBar()
         menubar.setStyleSheet("""
-            QMenuBar {
-                background-color: #333;
-                color: #fff;
-            }
-            QMenuBar::item {
-                background-color: transparent;
-                padding: 5px 10px;
-            }
-            QMenuBar::item:selected {
-                background-color: #007BFF;
-            }
-            QMenu {
-                background-color: #333;
-                color: #fff;
-                border: 1px solid #444;
-            }
-            QMenu::item:selected {
-                background-color: #007BFF;
-            }
-        """)
+QMenuBar {
+    background-color: #333;
+    color: #fff;
+}
+QMenuBar::item {
+    background-color: transparent;
+    padding: 5px 10px;
+}
+QMenuBar::item:selected {
+    background-color: #007BFF;
+}
+QMenu {
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #444;
+}
+QMenu::item:selected {
+    background-color: #007BFF;
+}
+""")
 
         # Меню "Настройки"
         self.settings_menu = menubar.addMenu(self.tr("Settings"))
@@ -872,23 +843,6 @@ class BrowserWindow(QMainWindow):
     def play_tab_close_sound(self):
         """ Воспроизводит звук закрытия вкладки. """
         self.tab_close_sound.play()
-
-    def load_history(self):
-        """ Загружает историю посещений из файла. """
-        try:
-            with open("history.json", "r") as file:
-                self.history = json.load(file)
-                # Убедимся, что история содержит только словари
-                self.history = [entry if isinstance(entry, dict) else {'url': entry, 'title': None, 'icon_data': None} for entry in self.history]
-        except (FileNotFoundError, json.JSONDecodeError):
-            self.history = []
-            with open("history.json", 'w') as f:
-                f.write("[]")
-
-    def save_history(self):
-        """ Сохраняет историю посещений в файл. """
-        with open("history.json", "w") as file:
-            json.dump(self.history, file)
 
     def show_history(self):
         """ Показывает историю посещений. """
