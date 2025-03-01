@@ -6,7 +6,15 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEng
 from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+import os
 import json
+import sys
+
+def real_path(relative):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative)
+    else:
+        return os.path.join(os.path.abspath("."), relative)
 
 class SearchEngineSettings(QDialog):
     def __init__(self, parent=None):
@@ -161,7 +169,7 @@ class HomePage(QWidget):
         dialog.exec_()
         # Проигрываем звук
         self.meme_sound = QMediaPlayer()
-        self.meme_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/meme_sound.ogg")))
+        self.meme_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/meme_sound.ogg"))))
         self.meme_sound.play()
 
     def perform_search(self):
@@ -256,17 +264,17 @@ class BrowserTab(QWidget):
         self.toolbar.setIconSize(QSize(16, 16))
 
         # Кнопка "Назад"
-        self.back_button = QAction(QIcon("images/back.png"), self.parent.tr("Back"), self)
+        self.back_button = QAction(QIcon(real_path("images/back.png")), self.parent.tr("Back"), self)
         self.back_button.triggered.connect(self.navigate_back)
         self.toolbar.addAction(self.back_button)
 
         # Кнопка "Вперед"
-        self.forward_button = QAction(QIcon("images/right.png"), self.parent.tr("Forward"), self)
+        self.forward_button = QAction(QIcon(real_path("images/right.png")), self.parent.tr("Forward"), self)
         self.forward_button.triggered.connect(self.navigate_forward)
         self.toolbar.addAction(self.forward_button)
 
         # Кнопка "Обновить"
-        self.reload_button = QAction(QIcon("images/reload.png"), self.parent.tr("Reload"), self)
+        self.reload_button = QAction(QIcon(real_path("images/reload.png")), self.parent.tr("Reload"), self)
         self.reload_button.triggered.connect(self.reload_page)
         self.toolbar.addAction(self.reload_button)
 
@@ -276,7 +284,7 @@ class BrowserTab(QWidget):
         self.toolbar.addWidget(self.url_bar)
 
         # Кнопка "Домой"
-        self.home_button = QAction(QIcon("images/home.png"), self.parent.tr("Home"), self)
+        self.home_button = QAction(QIcon(real_path("images/home.png")), self.parent.tr("Home"), self)
         self.home_button.triggered.connect(self.navigate_home)
         self.toolbar.addAction(self.home_button)
 
@@ -407,9 +415,9 @@ class BrowserTab(QWidget):
         """ Обрабатывает закрытие вкладки - останавливает медиа контент. """
         # Останавливаем воспроизведение медиа
         self.browser.page().runJavaScript("var videos = document.querySelectorAll('video');"
-                                          "videos.forEach(function(video) { video.pause(); });"
-                                          "var audios = document.querySelectorAll('audio');"
-                                          "audios.forEach(function(audio) { audio.pause(); });")
+                                        "videos.forEach(function(video) { video.pause(); });"
+                                        "var audios = document.querySelectorAll('audio');"
+                                        "audios.forEach(function(audio) { audio.pause(); });")
         event.accept()
 
 
@@ -502,17 +510,16 @@ class BrowserWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
 
         # Установка иконки браузера
-        self.setWindowIcon(QIcon("images/icon.jpg"))  # Убедитесь, что файл icon.jpg находится в той же директории
+        self.setWindowIcon(QIcon(real_path("images/icon.jpg")))  # Убедитесь, что файл icon.jpg находится в той же директории
 
         # Инициализация звуков
         # Используем QMediaPlayer вместо QSound
         self.click_sound = QMediaPlayer()
-        self.click_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/click.mp3")))
+        self.click_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/click.mp3"))))
         self.tab_open_sound = QMediaPlayer()
-        self.tab_open_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/tab_open.mp3")))
+        self.tab_open_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/tab_open.mp3"))))
         self.tab_close_sound = QMediaPlayer()
-        self.tab_close_sound.setMedia(QMediaContent(QUrl.fromLocalFile("sounds/tab_close.mp3")))
-
+        self.tab_close_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/tab_close.mp3"))))
         # Инициализация истории посещений
         self.history = []
         self.load_history()  # Загружаем историю из файла
