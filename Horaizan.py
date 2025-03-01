@@ -2,10 +2,19 @@ from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidg
     QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QTabBar, \
     QListWidget, QListWidgetItem, QPlainTextEdit, QTextEdit, QFileDialog
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineDownloadItem
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineDownloadItem
 from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
 from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtMultimedia import QSound
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+import os
 import json
+import sys
+
+def real_path(relative):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative)
+    else:
+        return os.path.join(os.path.abspath("."), relative)
 
 class SearchEngineSettings(QDialog):
     def __init__(self, parent=None):
@@ -65,6 +74,9 @@ class HomePage(QWidget):
         self.web_view.setHtml(self.get_animation_html())
         layout.addWidget(self.web_view)
 
+        # Подключаем обработчик изменения URL
+        self.web_view.urlChanged.connect(self.check_easter_egg)
+
         # Поле для ввода URL
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText(self.parent.tr("Enter URL or query..."))
@@ -104,7 +116,7 @@ class HomePage(QWidget):
         self.search_button.setText(self.parent.tr("Search"))
 
     def get_animation_html(self):
-        """ Возвращает HTML-код с тёмным градиентом на заднем фоне. """
+        """ Возвращает HTML-код с тёмным градиентом на заднем фоне и обработкой клика на заголовке. """
         return """
         <!DOCTYPE html>
         <html lang="ru">
@@ -121,7 +133,6 @@ class HomePage(QWidget):
                     font-family: 'Arial', sans-serif;
                     background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
                 }
-                /* Остальные стили остаются без изменений */
                 .title {
                     font-size: 80px;
                     font-weight: bold;
@@ -129,14 +140,37 @@ class HomePage(QWidget):
                     text-align: center;
                     padding-top: 200px;
                     text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+                    cursor: pointer;
                 }
             </style>
         </head>
         <body>
-            <div class="title">Horaizan Browser</div>
+            <div class="title" onclick="window.location.href='https://youtu.be/dQw4w9WgXcQ'">Horaizan Browser</div>
         </body>
         </html>
         """
+
+    def check_easter_egg(self, url):
+        """ Проверяет, если URL соответствует пасхалке. """
+        if url.toString() == 'https://youtu.be/dQw4w9WgXcQ':
+            self.display_meme()
+
+    def display_meme(self):
+        """ Отображает мем и проигрывает звук. """
+        # Показываем изображение в диалоговом окне
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Meme")
+        layout = QVBoxLayout()
+        label = QLabel()
+        pixmap = QPixmap("images/meme.png")
+        label.setPixmap(pixmap)
+        layout.addWidget(label)
+        dialog.setLayout(layout)
+        dialog.exec_()
+        # Проигрываем звук
+        self.meme_sound = QMediaPlayer()
+        self.meme_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/meme_sound.ogg"))))
+        self.meme_sound.play()
 
     def perform_search(self):
         """ Выполняет поиск по введенному запросу или открывает URL. """
@@ -230,17 +264,17 @@ class BrowserTab(QWidget):
         self.toolbar.setIconSize(QSize(16, 16))
 
         # Кнопка "Назад"
-        self.back_button = QAction(QIcon("images/back.png"), self.parent.tr("Back"), self)
+        self.back_button = QAction(QIcon(real_path("images/back.png")), self.parent.tr("Back"), self)
         self.back_button.triggered.connect(self.navigate_back)
         self.toolbar.addAction(self.back_button)
 
         # Кнопка "Вперед"
-        self.forward_button = QAction(QIcon("images/right.png"), self.parent.tr("Forward"), self)
+        self.forward_button = QAction(QIcon(real_path("images/right.png")), self.parent.tr("Forward"), self)
         self.forward_button.triggered.connect(self.navigate_forward)
         self.toolbar.addAction(self.forward_button)
 
         # Кнопка "Обновить"
-        self.reload_button = QAction(QIcon("images/reload.png"), self.parent.tr("Reload"), self)
+        self.reload_button = QAction(QIcon(real_path("images/reload.png")), self.parent.tr("Reload"), self)
         self.reload_button.triggered.connect(self.reload_page)
         self.toolbar.addAction(self.reload_button)
 
@@ -250,7 +284,7 @@ class BrowserTab(QWidget):
         self.toolbar.addWidget(self.url_bar)
 
         # Кнопка "Домой"
-        self.home_button = QAction(QIcon("images/home.png"), self.parent.tr("Home"), self)
+        self.home_button = QAction(QIcon(real_path("images/home.png")), self.parent.tr("Home"), self)
         self.home_button.triggered.connect(self.navigate_home)
         self.toolbar.addAction(self.home_button)
 
@@ -364,8 +398,8 @@ class BrowserTab(QWidget):
     def update_tab_title(self, title):
         """ Обновляет заголовок вкладки. """
         index = self.parent.tabs.indexOf(self)
-        if len(title) > 20:  # Сокращаем длинные названия
-            title = title[:20] + "..."
+        if len(title) > 25:  # Сокращаем длинные названия
+            title = title[:25] + ".."
         self.parent.tabs.setTabText(index, title)
 
     def on_download_requested(self, download):
@@ -376,15 +410,14 @@ class BrowserTab(QWidget):
         if path:
             download.setPath(path)
             download.accept()
-            download.finished.connect(lambda: self.parent.download_finished(download))
 
     def closeEvent(self, event):
         """ Обрабатывает закрытие вкладки - останавливает медиа контент. """
         # Останавливаем воспроизведение медиа
         self.browser.page().runJavaScript("var videos = document.querySelectorAll('video');"
-                                          "videos.forEach(function(video) { video.pause(); });"
-                                          "var audios = document.querySelectorAll('audio');"
-                                          "audios.forEach(function(audio) { audio.pause(); });")
+                                        "videos.forEach(function(video) { video.pause(); });"
+                                        "var audios = document.querySelectorAll('audio');"
+                                        "audios.forEach(function(audio) { audio.pause(); });")
         event.accept()
 
 
@@ -472,18 +505,21 @@ class BrowserWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.language = 'ru'  # Устанавливаем язык по умолчанию - русский
+        self.language = 'en'  # Устанавливаем язык по умолчанию - русский
         self.setWindowTitle("Horaizan Browser")
         self.setGeometry(100, 100, 1200, 800)
 
         # Установка иконки браузера
-        self.setWindowIcon(QIcon("images/icon.jpg"))  # Убедитесь, что файл icon.jpg находится в той же директории
+        self.setWindowIcon(QIcon(real_path("images/icon.jpg")))  # Убедитесь, что файл icon.jpg находится в той же директории
 
         # Инициализация звуков
-        # Используем QSound вместо pygame
-        self.click_sound = QSound("sounds/click.wav")
-        self.tab_open_sound = QSound("sounds/tab_open.wav")
-        self.tab_close_sound = QSound("sounds/tab_close.wav")
+        # Используем QMediaPlayer вместо QSound
+        self.click_sound = QMediaPlayer()
+        self.click_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/click.mp3"))))
+        self.tab_open_sound = QMediaPlayer()
+        self.tab_open_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/tab_open.mp3"))))
+        self.tab_close_sound = QMediaPlayer()
+        self.tab_close_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/tab_close.mp3"))))
 
         # Инициализация истории посещений
         self.history = []
