@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QLineEdit, QToolBar, QVBoxLayout, QWidget, QTabWidget, QPushButton, \
     QMessageBox, QAction, QComboBox, QDialog, QLabel, QHBoxLayout, QDialogButtonBox, QApplication, QTabBar, \
-    QListWidget, QListWidgetItem, QPlainTextEdit, QTextEdit, QFileDialog
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineDownloadItem
+    QListWidget, QListWidgetItem, QPlainTextEdit, QTextEdit, QFileDialog, QToolButton
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineDownloadItem
 from PyQt5.QtCore import QUrl, QSize, Qt, QBuffer, QByteArray
 from PyQt5.QtGui import QIcon, QPixmap
@@ -77,15 +76,10 @@ class HomePage(QWidget):
         # Подключаем обработчик изменения URL
         self.web_view.urlChanged.connect(self.check_easter_egg)
 
-        # Поле для ввода URL
-        self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText(self.parent.tr("Enter URL or query..."))
-        layout.addWidget(self.url_input)
-
-        # Поле для ввода поискового запроса
-        self.query_input = QLineEdit()
-        self.query_input.setPlaceholderText(self.parent.tr("Enter search query..."))
-        layout.addWidget(self.query_input)
+        # Поле для ввода URL и поискового запроса
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText(self.parent.tr("Enter URL or search query..."))
+        layout.addWidget(self.search_input)
 
         # Кнопка для перехода на поисковую страницу
         self.search_button = QPushButton(self.parent.tr("Search"))
@@ -111,8 +105,7 @@ class HomePage(QWidget):
 
     def retranslate(self):
         """ Обновление текста интерфейса при смене языка. """
-        self.url_input.setPlaceholderText(self.parent.tr("Enter URL or query..."))
-        self.query_input.setPlaceholderText(self.parent.tr("Enter search query..."))
+        self.search_input.setPlaceholderText(self.parent.tr("Enter URL or search query..."))
         self.search_button.setText(self.parent.tr("Search"))
 
     def get_animation_html(self):
@@ -131,7 +124,14 @@ class HomePage(QWidget):
                     height: 100%;
                     overflow-x: hidden;
                     font-family: 'Arial', sans-serif;
-                    background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+                    background: linear-gradient(270deg, #0f0c29, #302b63, #24243e);
+                    background-size: 400% 400%;
+                    animation: gradient 15s ease infinite;
+                }
+                @keyframes gradient {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
                 }
                 .title {
                     font-size: 80px;
@@ -174,15 +174,14 @@ class HomePage(QWidget):
 
     def perform_search(self):
         """ Выполняет поиск по введенному запросу или открывает URL. """
-        query = self.query_input.text().strip()
-        url = self.url_input.text().strip()
+        query = self.search_input.text().strip()
 
-        if url:
-            self.open_link(url)
-        elif query:
-            search_dialog = SearchEngineSettings(self)
-            if search_dialog.exec_():
-                search_url = search_dialog.get_search_url(query)
+        if query:
+            if query.startswith("http://") or query.startswith("https://"):
+                self.open_link(query)
+            else:
+                # Используем текущую поисковую систему
+                search_url = self.parent.current_search_engine.get_search_url(query)
                 self.open_link(search_url)
 
     def open_link(self, url):
@@ -264,19 +263,28 @@ class BrowserTab(QWidget):
         self.toolbar.setIconSize(QSize(16, 16))
 
         # Кнопка "Назад"
-        self.back_button = QAction(QIcon(real_path("images/back.png")), self.parent.tr("Back"), self)
-        self.back_button.triggered.connect(self.navigate_back)
-        self.toolbar.addAction(self.back_button)
+        self.back_button = QToolButton()
+        self.back_button.setIcon(QIcon(real_path("images/back.png")))
+        self.back_button.setToolTip(self.parent.tr("Back"))
+        self.back_button.clicked.connect(self.navigate_back)
+        self.back_button.setStyleSheet("QToolButton { transition: transform 0.2s; }")
+        self.toolbar.addWidget(self.back_button)
 
         # Кнопка "Вперед"
-        self.forward_button = QAction(QIcon(real_path("images/right.png")), self.parent.tr("Forward"), self)
-        self.forward_button.triggered.connect(self.navigate_forward)
-        self.toolbar.addAction(self.forward_button)
+        self.forward_button = QToolButton()
+        self.forward_button.setIcon(QIcon(real_path("images/right.png")))
+        self.forward_button.setToolTip(self.parent.tr("Forward"))
+        self.forward_button.clicked.connect(self.navigate_forward)
+        self.forward_button.setStyleSheet("QToolButton { transition: transform 0.2s; }")
+        self.toolbar.addWidget(self.forward_button)
 
         # Кнопка "Обновить"
-        self.reload_button = QAction(QIcon(real_path("images/reload.png")), self.parent.tr("Reload"), self)
-        self.reload_button.triggered.connect(self.reload_page)
-        self.toolbar.addAction(self.reload_button)
+        self.reload_button = QToolButton()
+        self.reload_button.setIcon(QIcon(real_path("images/reload.png")))
+        self.reload_button.setToolTip(self.parent.tr("Reload"))
+        self.reload_button.clicked.connect(self.reload_page)
+        self.reload_button.setStyleSheet("QToolButton { transition: transform 0.2s; }")
+        self.toolbar.addWidget(self.reload_button)
 
         # Адресная строка
         self.url_bar = QLineEdit()
@@ -284,9 +292,12 @@ class BrowserTab(QWidget):
         self.toolbar.addWidget(self.url_bar)
 
         # Кнопка "Домой"
-        self.home_button = QAction(QIcon(real_path("images/home.png")), self.parent.tr("Home"), self)
-        self.home_button.triggered.connect(self.navigate_home)
-        self.toolbar.addAction(self.home_button)
+        self.home_button = QToolButton()
+        self.home_button.setIcon(QIcon(real_path("images/home.png")))
+        self.home_button.setToolTip(self.parent.tr("Home"))
+        self.home_button.clicked.connect(self.navigate_home)
+        self.home_button.setStyleSheet("QToolButton { transition: transform 0.2s; }")
+        self.toolbar.addWidget(self.home_button)
 
         layout.addWidget(self.toolbar)
 
@@ -299,7 +310,9 @@ class BrowserTab(QWidget):
         if url:
             self.browser.setUrl(QUrl(url))
         else:
-            self.browser.setUrl(QUrl("https://www.google.com"))  # Открываем Google по умолчанию
+            # Используем поисковую систему по умолчанию
+            default_search_engine = self.parent.history[0]['url'] if self.parent.history else "https://www.google.com"
+            self.browser.setUrl(QUrl(default_search_engine))
         self.browser.urlChanged.connect(self.update_urlbar)
         self.browser.urlChanged.connect(self.add_to_history)  # Добавляем URL в историю
         self.browser.iconChanged.connect(self.update_tab_icon)  # Обновляем иконку вкладки
@@ -505,7 +518,8 @@ class BrowserWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.language = 'en'  # Устанавливаем язык по умолчанию - русский
+        self.language = 'en'  # Устанавливаем язык по умолчанию - английский
+        self.current_search_engine = SearchEngineSettings(self)  # Храним текущую поисковую систему
         self.setWindowTitle("Horaizan Browser")
         self.setGeometry(100, 100, 1200, 800)
 
@@ -513,13 +527,13 @@ class BrowserWindow(QMainWindow):
         self.setWindowIcon(QIcon(real_path("images/icon.jpg")))  # Убедитесь, что файл icon.jpg находится в той же директории
 
         # Инициализация звуков
-        # Используем QMediaPlayer вместо QSound
         self.click_sound = QMediaPlayer()
         self.click_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/click.mp3"))))
         self.tab_open_sound = QMediaPlayer()
         self.tab_open_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/tab_open.mp3"))))
         self.tab_close_sound = QMediaPlayer()
         self.tab_close_sound.setMedia(QMediaContent(QUrl.fromLocalFile(real_path("sounds/tab_close.mp3"))))
+        
         # Инициализация истории посещений
         self.history = []
         self.load_history()  # Загружаем историю из файла
@@ -835,10 +849,15 @@ class BrowserWindow(QMainWindow):
 
     def add_new_tab(self):
         """ Добавляет новую вкладку. """
-        new_tab = BrowserTab(self)
-        self.tabs.addTab(new_tab, self.tr("New Tab"))
-        self.tabs.setCurrentIndex(self.tabs.count() - 1)
-        self.play_tab_open_sound()  # Воспроизводим звук открытия вкладки
+        search_engine_dialog = SearchEngineSettings(self)
+        if search_engine_dialog.exec_():
+            selected_engine = search_engine_dialog.get_selected_engine()
+            self.current_search_engine = search_engine_dialog  # Сохраняем выбранную поисковую систему
+            default_search_url = search_engine_dialog.get_search_url("")  # Пустой запрос
+            new_tab = BrowserTab(self, default_search_url)
+            self.tabs.addTab(new_tab, self.tr("New Tab"))
+            self.tabs.setCurrentIndex(self.tabs.count() - 1)
+            self.play_tab_open_sound()  # Воспроизводим звук открытия вкладки
 
     def close_tab(self, index):
         """ Закрывает вкладку. """
@@ -858,6 +877,7 @@ class BrowserWindow(QMainWindow):
         search_engine_dialog = SearchEngineSettings(self)
         if search_engine_dialog.exec_():
             selected_engine = search_engine_dialog.get_selected_engine()
+            self.current_search_engine = search_engine_dialog  # Сохраняем выбранную поисковую систему
             QMessageBox.information(self, self.tr("Success"), self.tr("Search engine selected: {engine}").format(engine=selected_engine))
             self.play_click_sound()  # Воспроизводим звук клика
 
